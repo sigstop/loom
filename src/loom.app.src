@@ -1,0 +1,17 @@
+{application, loom,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {modules, [
+              loom_app,
+	      loom_sup,
+	      loom_server
+	     ]},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { loom_app, []}},
+  {env, []}
+ ]}.
