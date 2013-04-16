@@ -117,6 +117,5 @@ get_config(ConnNumber,State)->
     Connection = get_connection(ConnNumber,State),
     {ok, Config} = enetconf_client:get_config(Connection, running),
     ErlConfig = enetconf_parser:convert(Config),
-    io:format("Config = ~p~n",[ErlConfig]),
     ErlConfig.
     
