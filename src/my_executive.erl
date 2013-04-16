@@ -1,6 +1,6 @@
 -module(my_executive).
 
--export([start/0,add_capable_switch/1,get_config/1]).
+-export([start/0,add_capable_switch/1,get_config/1,get_config_xml/1,print_config_xml/1]).
 
 
 capable_switch(IP)->
@@ -16,12 +16,18 @@ add_capable_switch(IP)->
 
 
 get_config(IP)->
-    {ok,Connection} = enetconf_client:connect(IP,[{port, 1830}, {user, "linc"}, {password, "linc"}]),
-    {ok, Config} = enetconf_client:get_config(Connection, running),
+    Config = get_config_xml(IP),
     Result = enetconf_parser:convert(Config),
     {'rpc-reply',
      [{'message-id',_},{xmlns,_}],
      [{data,[],[ErlConfig]}]} = Result,
     ErlConfig.
 
+get_config_xml(IP)->
+    {ok,Connection} = enetconf_client:connect(IP,[{port, 1830}, {user, "linc"}, {password, "linc"}]),
+    {ok, Config} = enetconf_client:get_config(Connection, running),
+    Config.
 
+print_config_xml(IP)->
+    Config = get_config_xml(IP),
+    io:format("Config = ~p~n",[Config]).
