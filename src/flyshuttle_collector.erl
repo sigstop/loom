@@ -34,7 +34,7 @@ listen(Interface)->
 
 %% @private
 init(State)->
-    listen("en0"),
+    listen("en2"),
     {ok,State}.
 
 
