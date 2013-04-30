@@ -4,7 +4,7 @@
 
 -include("../include/loom.hrl").
 
--export([start/0,start/1,start_link/0,start_link/1,get_state/0,get_pid/0,get_connections/0,
+-export([start/0,start/1,start_link/0,start_link/2,get_state/0,get_pid/0,get_connections/0,
 	clear_all_flow_mods/0,broadcast_flow_mod/1,broken_call/0]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -14,18 +14,23 @@ start()->
     start_link().
 
 start(Port)->
-    start_link(Port).
+    start_link(Port,?DEFAULT_OFP_VERSION).
 
 start_link()->
-    start_link(?DEFAULT_CNTL_PORT).
+    start_link(?DEFAULT_CNTL_PORT,?DEFAULT_OFP_VERSION).
 
-start_link(Port)->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [{port,Port}], []).
+start_link(Port,OFProtocolVersion)->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [{port,Port},{ofp_ver,OFProtocolVersion}], []).
 
 init(State)->
-    [{port,Port}]=State,
-    {ok,CtrlPid} = of_controller_v4:start(Port),
-    NewState = State ++ [{pid,CtrlPid}],
+    Port = get_port(State),
+    OFPVer = get_ofp_ver(State),
+    ControllerModule = case OFPVer of
+			   1.3 -> of_controller_v4;
+			   1.2 -> of_controller_v3
+		       end,
+    {ok,CtrlPid} = ControllerModule:start(Port),
+    NewState = State ++ [{pid,CtrlPid},{cntrl_mod,ControllerModule}],
     {ok,NewState}.
     
 broken_call()->
@@ -94,28 +99,42 @@ code_change(_OldVsn, State, _Extra) ->
 
 %% implementaion
 
+get_state_value(State,Name)->
+    {Name,Value} = lists:keyfind(Name,1,State),
+    Value.
+
 get_pid(State)->
-    {pid,Pid} = lists:keyfind(pid,1,State),
-    Pid.
+    get_state_value(State,pid).
+
+get_ofp_ver(State)->
+    get_state_value(State,ofp_ver).
+
+get_port(State)->
+    get_state_value(State,port).
+
+get_cntrl_mod(State)->
+    get_state_value(State,cntrl_mod).
 
 get_connections(State)->
     CtrlPid = get_pid(State),
-    {ok,Connections} = of_controller_v4:get_connections(CtrlPid),
-    Connections.
+    CntrlMod = get_cntrl_mod(State),
+    CntrlMod:get_connections(CtrlPid).
+
 
 broadcast_flow_mod(State,FlowMod)->
     CtrlPid = get_pid(State),
     Connections = get_connections(State),
     [Conn|_] = Connections,  %% TODO: handle all connections
-    of_controller_v4:send(CtrlPid, Conn, FlowMod).
-
+    CntrlMod = get_cntrl_mod(State),
+    CntrlMod:send(CtrlPid, Conn, FlowMod).
 
 clear_all_flow_mods(State)->
     CtrlPid = get_pid(State),
     Connections = get_connections(State),
     [Conn|_] = Connections,  %% TODO: handle all connections
     FlowMod = loom_flow_lib:clear_all_flows_mod(),
-    of_controller_v4:send(CtrlPid, Conn, FlowMod).
+    CntrlMod = get_cntrl_mod(State),
+    CntrlMod:send(CtrlPid, Conn, FlowMod).
 
 
     

@@ -6,4 +6,6 @@
 
 -define(DEFAULT_CNTL_PORT, 6633).
 
+-define(DEFAULT_OFP_VERSION, 1.3).
+
 
