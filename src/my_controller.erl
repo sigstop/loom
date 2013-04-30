@@ -1,6 +1,6 @@
 -module(my_controller).
 
--export([start/0,link/2,tap/3,gate/2,clear/0]).
+-export([start/0,link/2,forward/2,link_and_tap/3,link_and_tap2/3, clear/0]).
 
 start()->
     loom_controller:start().
@@ -9,22 +9,23 @@ start()->
 clear()->
     loom_controller:clear_all_flow_mods().
 
+forward(InPort,OutPorts)->
+    Mod= loom_flow_lib:forward_mod(InPort,OutPorts),
+    loom_controller:broadcast_flow_mod(Mod).
 
+
+%%% User defined things
 
 link(Port1,Port2)->
-    Mod1 = loom_flow_lib:gate_mod(Port1,Port2,12),
-    loom_controller:broadcast_flow_mod(Mod1),
-    Mod2 = loom_flow_lib:gate_mod(Port2,Port1,12),
-    loom_controller:broadcast_flow_mod(Mod2).
-
-tap(InPort,OutPort,TapPort)->
-    gate(InPort,OutPort),
-    gate(OutPort,TapPort),
-    gate(TapPort,InPort).
-%    Mod1 = loom_flow_lib:tap_mod(InPort,OutPorts,Seq),
-%    loom_controller:broadcast_flow_mod(Mod1).
+    forward(Port1,[Port2]),
+    forward(Port2,[Port1]).
 
 
-gate(InPort,OutPort)->
-    Mod1= loom_flow_lib:gate_mod(InPort,OutPort,14),
-    loom_controller:broadcast_flow_mod(Mod1).
+link_and_tap(Port1,Port2, TapPorts)->
+    forward(Port1,[Port2 | TapPorts]),
+    forward(Port2,[Port1 | TapPorts]).
+
+link_and_tap2(Port1,Port2, TapPorts)->
+    forward(Port1,[Port2]),
+    forward(Port2,[Port1 | TapPorts]).
+
