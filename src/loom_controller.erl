@@ -114,7 +114,8 @@ clear_all_flow_mods(State)->
     CtrlPid = get_pid(State),
     Connections = get_connections(State),
     [Conn|_] = Connections,  %% TODO: handle all connections
-    of_controller_v4:send(CtrlPid, Conn, ?CLEAR_ALL_FLOW_MODS).
+    FlowMod = loom_flow_lib:clear_all_flows_mod(),
+    of_controller_v4:send(CtrlPid, Conn, FlowMod).
 
 
     
