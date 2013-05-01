@@ -1,6 +1,6 @@
 -module(my_controller).
 
--export([start/0,link/2,forward/2,link_and_tap/3,link_and_tap2/3, clear/0]).
+-export([start/0,link/2,forward/2,match_forward/4,link_and_tap/3,link_and_tap2/3, clear/0]).
 
 start()->
     loom_controller:start().
@@ -10,8 +10,13 @@ clear()->
     loom_controller:clear_all_flow_mods().
 
 forward(InPort,OutPorts)->
-    Mod= loom_flow_lib:forward_mod(InPort,OutPorts),
+    Mod = loom_flow_lib:forward_mod(InPort,OutPorts),
     loom_controller:broadcast_flow_mod(Mod).
+
+match_forward(InPort,EthDst,IPv4Dst,OutPorts)->
+    Mod = loom_flow_lib:matchforward_mod(InPort,EthDst,IPv4Dst,OutPorts),
+    loom_controller:broadcast_flow_mod(Mod).
+    
 
 
 %%% User defined things
@@ -28,4 +33,3 @@ link_and_tap(Port1,Port2, TapPorts)->
 link_and_tap2(Port1,Port2, TapPorts)->
     forward(Port1,[Port2]),
     forward(Port2,[Port1 | TapPorts]).
-

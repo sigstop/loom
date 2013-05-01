@@ -27,7 +27,7 @@ init(State)->
     OFPVer = get_ofp_ver(State),
     ControllerModule = case OFPVer of
 			   1.3 -> of_controller_v4;
-			   1.2 -> of_controller_v3
+			   1.2 -> of_controller
 		       end,
     {ok,CtrlPid} = ControllerModule:start(Port),
     NewState = State ++ [{pid,CtrlPid},{cntrl_mod,ControllerModule}],
