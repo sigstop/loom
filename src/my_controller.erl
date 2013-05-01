@@ -59,10 +59,10 @@ test_start()->
 test_drop_loop()->
     drop_loops(6,<<10,192,168,86>>).
 
-link_macs()->
-    Mod1 = loom_flow_lib:match_forward_mod(5,<<16#b8,16#27,16#eb,16#bc,16#69,16#c8>>,6),
+link_macs(TapPorts)->
+    Mod1 = loom_flow_lib:match_forward_mod(5,<<16#b8,16#27,16#eb,16#bc,16#69,16#c8>>,[6|TapPorts]),
     loom_controller:broadcast_flow_mod(Mod1),
-    Mod2 = loom_flow_lib:match_forward_mod(6,<<16#b8,16#27,16#eb,16#f0,16#cc,16#c0>>,5),
+    Mod2 = loom_flow_lib:match_forward_mod(6,<<16#b8,16#27,16#eb,16#f0,16#cc,16#c0>>,[5|TapPorts]),
     loom_controller:broadcast_flow_mod(Mod2).
     
 

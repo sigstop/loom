@@ -28,9 +28,9 @@ drop_loops_mod(InPort,IPv4Dst)->
     #ofp_message{ version = 4, type = flow_mod, body = #ofp_flow_mod{table_id = 0,command = add, priority = 200,idle_timeout = 30000, hard_timeout = 60000, cookie = <<0,0,0,0,0,0,0,10>>,cookie_mask = <<0,0,0,0,0,0,0,0>>,match = Match, instructions = [#ofp_instruction_apply_actions{actions = Actions} ] } }.
     
 
-match_forward_mod(InPort,EthDst,Outport)->
+match_forward_mod(InPort,EthDst,OutPorts)->
     Match = match_port_eth_dst(InPort,EthDst),
-    Actions = actions_out_ports([Outport]),
+    Actions = actions_out_ports(OutPorts),
     #ofp_message{ version = 4, type = flow_mod, body = #ofp_flow_mod{table_id = 0,command = add, priority = 200,idle_timeout = 30000, hard_timeout = 60000, cookie = <<0,0,0,0,0,0,0,10>>,cookie_mask = <<0,0,0,0,0,0,0,0>>,match = Match, instructions = [#ofp_instruction_apply_actions{actions = Actions } ]} }.
 
 drop_loops_mod1(InPort,EthDst)->
