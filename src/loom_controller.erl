@@ -5,7 +5,7 @@
 -include("../include/loom.hrl").
 
 -export([start/0,start/1,start_link/0,start_link/2,get_state/0,get_pid/0,get_connections/0,
-	clear_all_flow_mods/0,broadcast_flow_mod/1,broken_call/0]).
+	remove_all_flows/0,broadcast_flow_mod/1,broken_call/0]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
@@ -45,12 +45,11 @@ get_state()->
 get_connections()->		   
     gen_server:call(?MODULE, get_connections).
 
-clear_all_flow_mods()->
-    gen_server:call(?MODULE, clear_all_flow_mods).
+remove_all_flows()->
+    gen_server:call(?MODULE, remove_all_flows).
 
 broadcast_flow_mod(Flow)->
     gen_server:call(?MODULE, {broadcast_flow_mod,Flow}).
-
     
 %% callbacks
 handle_call(get_state, _From, State) ->
@@ -72,8 +71,8 @@ handle_call({broadcast_flow_mod, FlowMod} , _From, State) ->
     io:format("Adding a flow mod to all switches!~n"),
     {reply, Reply, State};
 
-handle_call(clear_all_flow_mods, _From, State) ->
-    Reply = clear_all_flow_mods(State),
+handle_call(remove_all_flows, _From, State) ->
+    Reply = remove_all_flows(State),
     io:format("Removing all flows from all switches!~n"),
     {reply, Reply, State};
 
@@ -118,7 +117,8 @@ get_cntrl_mod(State)->
 get_connections(State)->
     CtrlPid = get_pid(State),
     CntrlMod = get_cntrl_mod(State),
-    CntrlMod:get_connections(CtrlPid).
+    {ok,Connections} = CntrlMod:get_connections(CtrlPid),
+    Connections.
 
 
 broadcast_flow_mod(State,FlowMod)->
@@ -128,13 +128,10 @@ broadcast_flow_mod(State,FlowMod)->
     CntrlMod = get_cntrl_mod(State),
     CntrlMod:send(CtrlPid, Conn, FlowMod).
 
-clear_all_flow_mods(State)->
-    CtrlPid = get_pid(State),
-    Connections = get_connections(State),
-    [Conn|_] = Connections,  %% TODO: handle all connections
-    FlowMod = loom_flow_lib:clear_all_flows_mod(),
+remove_all_flows(State)->
     CntrlMod = get_cntrl_mod(State),
-    CntrlMod:send(CtrlPid, Conn, FlowMod).
+    FlowMod = CntrlMod:remove_all_flows(),
+    broadcast_flow_mod(State,FlowMod).
 
 
     
