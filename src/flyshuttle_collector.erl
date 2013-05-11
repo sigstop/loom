@@ -37,6 +37,8 @@ init(State)->
     listen("en2"),
     {ok,State}.
 
+-define(SWITCH_ID,255).
+-define(PORT_ID,255).
 
 %% @private
 handle_call(_Message,_From,State)->
@@ -45,8 +47,10 @@ handle_call(_Message,_From,State)->
 handle_cast(_Message,State)->
     {noreply, State}.
 
-handle_info({packet, _DataLinkType, _Time, _Length, _Frame},State) ->
+handle_info({packet, _DataLinkType, _Time, _Length, Frame},State) ->
     io:format("frame recieved\n"),
+    LincPkt = linc_us4_packet:binary_to_record(Frame, ?SWITCH_ID, ?PORT_ID),
+    io:format("packet recieved = ~w~n",[LincPkt]),
     {noreply, State};
 
 handle_info(_Info, State) ->

@@ -28,7 +28,7 @@ drop_loops(InPort,IPv4Dst)->
 drop_loops1(InPort,EthDst)->
     Mod = loom_flow_lib:drop_loops_mod1(InPort,EthDst),
     loom_controller:broadcast_flow_mod(Mod).
-    
+
 
 
 %%% User defined things
@@ -49,11 +49,21 @@ link_and_tap2(Port1,Port2, TapPorts)->
 
 
 %%%% Testing
-
 test_start()->
     start(),
     timer:sleep(3000),
     clear().
+
+run_test1()->
+    start(),
+    timer:sleep(3000),
+    clear(),
+    timer:sleep(1000),
+    test_overlap(),
+    timer:sleep(1000),
+    clear(),
+    timer:sleep(1000),
+    test_overlap2().
 
 
 test_drop_loop()->
@@ -64,6 +74,28 @@ link_macs(TapPorts)->
     loom_controller:broadcast_flow_mod(Mod1),
     Mod2 = loom_flow_lib:match_forward_mod(6,<<16#b8,16#27,16#eb,16#f0,16#cc,16#c0>>,[5|TapPorts]),
     loom_controller:broadcast_flow_mod(Mod2).
+
+
+test_overlap()->             
+    Mod1 = loom_flow_lib:match_forward_mod(5,
+					   <<16#b8,16#27,16#eb,16#bc,16#69,16#c8>>,
+					   [6],
+					   250,
+					   [check_overlap]),
+    Mod2 = loom_flow_lib:forward_mod(5,[6],250,[check_overlap]),
+    loom_controller:broadcast_flow_mod(Mod1),
+    loom_controller:broadcast_flow_mod(Mod2).  %% Should fail
+
+test_overlap2()->             
+    Mod1 = loom_flow_lib:match_forward_mod(5,
+					   <<16#b8,16#27,16#eb,16#bc,16#69,16#c8>>,
+					   [6],
+					   250,
+					   [check_overlap]),
+    Mod2 = loom_flow_lib:forward_mod(5,[6],250,[check_overlap]),
+    loom_controller:broadcast_flow_mod(Mod2),
+    loom_controller:broadcast_flow_mod(Mod1).  %% Should fail
+    
     
 
 test_drop_loop1()->
@@ -77,3 +109,8 @@ print_mod()->
 print_mod2()->
     Mod = loom_flow_lib:drop_loops_mod1(6,<<16#b8,16#27,16#eb,16#bc,16#69,16#c8>>),
     io:format("~w~n",[Mod]).
+
+get_flow_table(TableId)->
+    Mod = loom_flow_lib:get_flow_table_message(TableId),
+    loom_controller:broadcast_flow_mod(Mod).
+	

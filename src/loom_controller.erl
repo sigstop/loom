@@ -80,12 +80,24 @@ handle_call(broken_call, _From, State) ->
     fake_module:broken_call(),
     {reply, error, State};
 
-handle_call(_Request, _From, State) ->
+handle_call({message, Message},_From,State)->
+    io:format("GOT MESSAGE: ~p~n",[Message]),
+  %  {cast,{ofp_message,4,ofp_multipart_request,0,
+%	   {ofp_experimenter_request,[],7636849,1,
+%	    FlowTableBin}},_Meta} = Message,
+ %   FlowTable = binary_to_term(FlowTableBin),
+ %   io:format("FLOW TABLE: ~p~n",[FlowTable]),
+    {noreply, State};
+
+handle_call(Request, _From, State) ->
+    io:format("GOT UNKNOWN CALL REQUEST: ~p~n",[Request]),
     Reply = ok,
     {reply, Reply, State}.
 
-handle_cast(_Msg, State) ->
+handle_cast(Msg, State) ->
+    io:format("GOT UNKNOWN CAST REQUEST: ~p~n",[Msg]),
     {noreply, State}.
+
 
 handle_info(_Info, State) ->
     {noreply, State}.
