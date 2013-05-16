@@ -108,3 +108,35 @@ body = #ofp_experimenter_request {
   experimenter = 16#00748771,
   exp_type = 1,
   data =  term_to_binary({{table_id,TableId}}) }}.
+
+% Change controller role: 0->no change, 1->equal, 2->master, 3->slave
+role_request(Role, GenerationID)->
+#ofp_message{
+version = 4,
+type = ofp_role_request,
+body = #ofp_role_request {
+  role = Role,
+  generation_id = GenerationID }}.
+
+% Get flow stats based on Port, Cookie, Match  
+flow_stats_request(TableId, Port, Cookie, CookieMask, Match) ->
+#ofp_message{
+version = 4,
+type =  ofp_multipart_request,
+body = #ofp_flow_stats_request {
+    table_id = TableId,
+    out_port = Port,
+    cookie = Cookie,
+    cookie_mask = CookieMask,
+    match = Match }}.
+
+aggregate_stats_request(TableId, Port, Cookie, CookieMask, Match) ->
+#ofp_message{
+version = 4,
+type =  ofp_multipart_request,
+body = #ofp_aggregate_stats_request {
+    table_id = TableId,
+    out_port = Port,
+    cookie = Cookie,
+    cookie_mask = CookieMask,
+    match = Match }}.
