@@ -1,7 +1,8 @@
 -module(loom_flow_lib).
 
 -export([remove_all_flows_mod/0,forward_mod/2,forward_mod/4,match_forward_mod/3,
-	 match_forward_mod/5,drop_loops_mod/2,drop_loops_mod1/2,get_flow_table_message/1]).
+	 match_forward_mod/5,drop_loops_mod/2,drop_loops_mod1/2,get_flow_table_message/1,
+         role_request/2, flow_stats_request/5, aggregate_stats_request/5]).
 
 -include("../include/loom.hrl").
 
