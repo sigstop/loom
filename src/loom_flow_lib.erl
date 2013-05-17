@@ -120,16 +120,13 @@ body = #ofp_role_request {
   generation_id = GenerationID }}.
 
 % Get flow stats based on Port, Cookie, Match  
-flow_stats_request(TableId, Port, Cookie, CookieMask, Match) ->
+flow_stats_request(TableId) ->
 #ofp_message{
 version = 4,
 type =  ofp_multipart_request,
 body = #ofp_flow_stats_request {
-    table_id = TableId,
-    out_port = Port,
-    cookie = Cookie,
-    cookie_mask = CookieMask,
-    match = Match }}.
+    table_id = TableId
+    }}.
 
 aggregate_stats_request(TableId, Port, Cookie, CookieMask, Match) ->
 #ofp_message{

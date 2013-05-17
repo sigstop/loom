@@ -272,6 +272,9 @@ handle(#cstate{parent = Parent, socket = Socket,
 	    io:format("======== Flow Table ==========\n"),
 	    io:format("~p\n", [Table]),
 	    io:format("==============================\n"),
+%	    TableString = io_lib:format("~w",[Table]),
+%	    elib:send('flow_table_data','loomWin1',lists:flatten(TableString)),
+	    [elib:send('flow_table_data','loomWin1',lists:flatten( io_lib:format("~w",[Flow])))||Flow <- Table],
 	    handle(State);
         {msg, Socket, Message} ->
             lager:info("Received message from ~p: ~p", [Socket, Message]),
