@@ -1,8 +1,16 @@
 -module(loom_flow_lib).
 
--export([remove_all_flows_mod/0,forward_mod/2,forward_mod/4,match_forward_mod/3,
-	 match_forward_mod/5,drop_loops_mod/2,drop_loops_mod1/2,get_flow_table_message/1,
-         role_request/2, flow_stats_request/1, aggregate_stats_request/5]).
+-export([remove_all_flows_mod/0,
+	 forward_mod/2,forward_mod/4,
+	 match_forward_mod/3,
+	 match_forward_mod/5,
+	 drop_loops_mod/2,
+	 drop_loops_mod1/2,
+	 get_flow_table_message/1,
+         role_request/2,
+	 flow_stats_request/1,
+	 aggregate_stats_request/5,
+	 config_packet_in/1]).
 
 -include("../include/loom.hrl").
 
@@ -138,3 +146,12 @@ body = #ofp_aggregate_stats_request {
     cookie = Cookie,
     cookie_mask = CookieMask,
     match = Match }}.
+
+config_packet_in(Param)->
+#ofp_message{version = 4,
+	     type = ofp_set_async,
+	     body = #ofp_set_async{
+	       packet_in_mask = {Param,Param},
+	       port_status_mask = {[],[]},
+	       flow_removed_mask = {[],[]}
+	      }}.

@@ -113,4 +113,8 @@ print_mod2()->
 get_flow_table(TableId)->
     Mod = loom_flow_lib:get_flow_table_message(TableId),
     loom_controller:broadcast_flow_mod(Mod).
+
+config_packet_in(Param)->
+    Mod = loom_flow_lib:config_packet_in(Param),
+    loom_controller:broadcast_flow_mod(Mod).
 	
