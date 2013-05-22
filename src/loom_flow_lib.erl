@@ -143,6 +143,7 @@ type =  ofp_multipart_request,
 body = #ofp_aggregate_stats_request {
     table_id = TableId }}.
 
+% possible values [no_match, action, invalid_ttl]
 config_packet_in(Param)->
 #ofp_message{version = 4,
 	     type = ofp_set_async,
