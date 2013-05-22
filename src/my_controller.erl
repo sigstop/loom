@@ -117,4 +117,8 @@ get_flow_table(TableId)->
 config_packet_in(Param)->
     Mod = loom_flow_lib:config_packet_in(Param),
     loom_controller:broadcast_flow_mod(Mod).
-	
+
+role_request(Role)->
+    GenId = 1,
+    Request = loom_flow_lib:role_request(Role, GenId),
+    loom_controller:broadcast_flow_mod(Request).

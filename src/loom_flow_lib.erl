@@ -7,10 +7,10 @@
 	 drop_loops_mod/2,
 	 drop_loops_mod1/2,
 	 get_flow_table_message/1,
-         role_request/2,
 	 flow_stats_request/1,
-	 aggregate_stats_request/5,
-	 config_packet_in/1]).
+	 aggregate_stats_request/1,
+	 config_packet_in/1,
+         role_request/2]).
 
 -include("../include/loom.hrl").
 
@@ -118,7 +118,7 @@ body = #ofp_experimenter_request {
   exp_type = 1,
   data =  term_to_binary({{table_id,TableId}}) }}.
 
-% Change controller role: 0->no change, 1->equal, 2->master, 3->slave
+% Change controller role: nochange, equal, master, slave
 role_request(Role, GenerationID)->
 #ofp_message{
 version = 4,
@@ -136,22 +136,18 @@ body = #ofp_flow_stats_request {
     table_id = TableId
     }}.
 
-aggregate_stats_request(TableId, Port, Cookie, CookieMask, Match) ->
+aggregate_stats_request(TableId) ->
 #ofp_message{
 version = 4,
 type =  ofp_multipart_request,
 body = #ofp_aggregate_stats_request {
-    table_id = TableId,
-    out_port = Port,
-    cookie = Cookie,
-    cookie_mask = CookieMask,
-    match = Match }}.
+    table_id = TableId }}.
 
 config_packet_in(Param)->
 #ofp_message{version = 4,
 	     type = ofp_set_async,
 	     body = #ofp_set_async{
 	       packet_in_mask = {Param,Param},
-	       port_status_mask = {[],[]},
-	       flow_removed_mask = {[],[]}
+	       port_status_mask = {[add, delete, modify],[add, delete, modify]},
+	       flow_removed_mask = {[idle_timeout, hard_timeout, delete, group_delete], [idle_timeout, hard_timeout, delete, group_delete]}
 	      }}.
