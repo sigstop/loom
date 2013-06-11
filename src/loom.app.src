@@ -1,17 +1,12 @@
 {application, loom,
- [
-  {description, ""},
-  {vsn, "1"},
-  {modules, [
-              loom_app,
-	      loom_sup,
-	      loom_server
-	     ]},
-  {registered, []},
+ [{description, "OpenFlow Controller"},
+  {vsn, "0.1"},
   {applications, [
                   kernel,
-                  stdlib
+                  stdlib,
+		  lager,
+		  mnesia
                  ]},
-  {mod, { loom_app, []}},
+  {mod, {loom, []}},
   {env, []}
  ]}.

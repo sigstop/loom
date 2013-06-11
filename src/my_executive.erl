@@ -1,12 +1,13 @@
 -module(my_executive).
 
 -export([start/0,add_capable_switch/1,get_config/1,get_config_xml/1,print_config_xml/1,
-	tilera_linc/0,linc3/0,linc4/0,pi_linc/0]).
+	tilera_linc/0,linc3/0,linc4/0,pi_linc/0,local_linc/0]).
 
 -define(TILERA,{"10.192.168.152",[{port, 1831}, {user, "linc"}, {password, "linc"}]}).
 -define(LINC3,{"10.192.168.152",[{port, 1830}, {user, "linc"}, {password, "linc"}]}).
 -define(LINC4,{"10.192.168.158",[{port, 1830}, {user, "linc"}, {password, "linc"}]}).
 -define(PI,{"10.192.168.163",[{port, 1830}, {user, "linc"}, {password, "linc"}]}).
+-define(LOCAL,{"127.0.0.1",[{port, 1830}, {user, "linc"}, {password, "linc"}]}).
 
 
 capable_switch(IP)->
@@ -31,6 +32,9 @@ linc4()->
 
 pi_linc()->
     ?PI.
+
+local_linc()->
+    ?LOCAL.
 
 get_config(CapableSwitch)->
     Config = get_config_xml(CapableSwitch),

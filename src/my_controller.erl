@@ -1,7 +1,7 @@
 -module(my_controller).
 
 -compile([export_all]).
--export([start/0,start/1,link/2,forward/2,match_forward/4,drop_loops/2,drop_loops1/2,link_and_tap/3,link_and_tap2/3, clear/0]).
+-export([start/0,start/1,dp_link/3,dp_forward/3,match_forward/4,drop_loops/2,drop_loops1/2,dp_link_and_tap/4,dp_link_and_tap2/4, dp_clear/1]).
 
 start()->
     loom_controller:start().
@@ -10,12 +10,12 @@ start()->
 start(Version)->
     loom_controller:start_link(6633,Version).
 
-clear()->
-    loom_controller:remove_all_flows().
+dp_clear(Pid)->
+    loom_ofdp:send(Pid,remove_all_flows).
 
-forward(InPort,OutPorts)->
-    Mod = loom_flow_lib:forward_mod(InPort,OutPorts),
-    loom_controller:broadcast_flow_mod(Mod).
+dp_forward(Pid,InPort,OutPorts)->
+    Msg = loom_flow_lib:forward_mod(InPort,OutPorts),
+    loom_ofdp:send_ofp_msg(Pid,Msg).
 
 match_forward(InPort,EthDst,IPv4Dst,OutPorts)->
     Mod = loom_flow_lib:matchforward_mod(InPort,EthDst,IPv4Dst,OutPorts),
@@ -33,37 +33,20 @@ drop_loops1(InPort,EthDst)->
 
 %%% User defined things
 
-link(Port1,Port2)->
-    forward(Port1,[Port2]),
-    forward(Port2,[Port1]).
+dp_link(Pid,Port1,Port2)->
+    dp_forward(Pid,Port1,[Port2]),
+    dp_forward(Pid,Port2,[Port1]).
 
 
 
-link_and_tap(Port1,Port2, TapPorts)->
-    forward(Port1,[Port2 | TapPorts]),
-    forward(Port2,[Port1 | TapPorts]).
+dp_link_and_tap(Pid, Port1,Port2, TapPorts)->
+    dp_forward(Pid, Port1,[Port2 | TapPorts]),
+    dp_forward(Pid, Port2,[Port1 | TapPorts]).
 
-link_and_tap2(Port1,Port2, TapPorts)->
-    forward(Port1,[Port2]),
-    forward(Port2,[Port1 | TapPorts]).
+dp_link_and_tap2(Pid, Port1,Port2, TapPorts)->
+    dp_forward(Pid, Port1,[Port2]),
+    dp_forward(Pid, Port2,[Port1 | TapPorts]).
 
-
-%%%% Testing
-test_start()->
-    start(),
-    timer:sleep(3000),
-    clear().
-
-run_test1()->
-    start(),
-    timer:sleep(3000),
-    clear(),
-    timer:sleep(1000),
-    test_overlap(),
-    timer:sleep(1000),
-    clear(),
-    timer:sleep(1000),
-    test_overlap2().
 
 
 test_drop_loop()->
@@ -99,7 +82,7 @@ test_overlap2()->
     
 
 test_drop_loop1()->
-    forward(6,[5]),
+    dp_forward(fix,6,[5]),
     drop_loops1(5,<<16#b8,16#27,16#eb,16#bc,16#69,16#c8>>).
     
 

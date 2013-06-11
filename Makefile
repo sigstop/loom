@@ -6,8 +6,9 @@ rel: compile
 
 offline:
 	@./rebar compile
-	@./rebar generate -f
-	@./scripts/post_generate_hook
+#	erl -pa ebin
+#	@./rebar generate -f
+#	@./scripts/post_generate_hook
 
 compile: get-deps update-deps
 	@./rebar compile
@@ -18,7 +19,7 @@ get-deps:
 update-deps:
 	@./rebar update-deps
 
-test: compile
+test: offline
 	@./rebar skip_deps=true apps="loom" eunit
 
 test_us3: compile

@@ -1,17 +1,16 @@
 -module(loom_app).
 
--behaviour(application).
+-export[start/0].
 
-%% Application callbacks
--export([start/2, stop/1]).
-
-%% ===================================================================
-%% Application callbacks
-%% ===================================================================
-
-start(_StartType, _StartArgs) ->
-    loom_sup:start_link(),
-    loom_server:start_link().
-
-stop(_State) ->
-    ok.
+start()->
+    error_logger:tty(false),
+    ok = application:start(crypto),
+    ok = application:start(public_key),
+    ok = application:start(ssh),
+    ok = application:start(xmerl),
+    ok = application:start(mnesia),
+    ok = application:start(syntax_tools),
+    ok = application:start(compiler),
+    ok = application:start(lager),
+    ok = lager:set_loglevel(lager_console_backend, error),
+    ok = application:start(loom).
