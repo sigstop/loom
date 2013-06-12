@@ -88,6 +88,7 @@ handle_cast(recv,State)->
     Socket = State#state.socket,
     Parent = State#state.parent,
     Listener = State#state.listener,
+    send(self(),hello),
     loom_ofdp_recv:create(Parent,Listener,self(),Socket),
     {noreply,State};
 

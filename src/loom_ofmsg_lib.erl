@@ -19,6 +19,7 @@
          barrier_request/0,
          queue_get_config_request/0,
          features_request/0,
+	 flow_stats_request/1,
          remove_all_flows/0,
          group_mod/0,
          port_mod/0,
@@ -121,6 +122,15 @@ table_miss_flow_mod() ->
                           command = add,
                           priority = 0,
                           instructions = [Instruction]}).
+
+% Get flow stats based on Port, Cookie, Match  
+flow_stats_request(TableId) ->
+#ofp_message{
+version = 4,
+type =  ofp_multipart_request,
+body = #ofp_flow_stats_request {
+    table_id = TableId
+    }}.
 
 %%% Helpers --------------------------------------------------------------------
 

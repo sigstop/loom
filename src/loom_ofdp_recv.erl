@@ -85,7 +85,7 @@ recv(State) ->
 	    lager:info("Received TCP data from ~p: ~p", [Socket, Data]),
 	    {ok, NewParser, Messages} = ofp_parser:parse(Parser,Data),
 	    lists:foreach(fun(Message) ->
-				  lager:info("Received Message from ~p: ~p", [Socket, Message])
+				  lager:info("Received Message from ~p: ~w", [Socket, Message])
 			  end, Messages),
 	    inet:setopts(Socket,[{active, once}]),
 	    recv(State#state{parser = NewParser});

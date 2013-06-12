@@ -25,3 +25,8 @@ link_and_tap(Pid, Port1,Port2, TapPorts)->
 link_and_tap2(Pid, Port1,Port2, TapPorts)->
     forward(Pid, Port1,[Port2]),
     forward(Pid, Port2,[Port1 | TapPorts]).
+
+get_flow_table(Pid,TableId)->
+    Msg = loom_ofmsg_lib:flow_stats_request(TableId),
+    loom_ofdp:send_ofp_msg(Pid,Msg).
+    
