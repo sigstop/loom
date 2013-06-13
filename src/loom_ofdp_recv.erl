@@ -12,10 +12,10 @@
 
 -include("../include/loom.hrl").
 
--record(state, {pid, parent, listener, sender, socket, address, port, sup, parser}).
+-record(state, {pid, console, parent, listener, sender, socket, address, port, sup, parser}).
 
 %% API
--export([start_link/4,create/4,send/2]).
+-export([start_link/4,create/4,send/2,set_console/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -25,6 +25,7 @@
 %% API functions
 %% ===================================================================
 
+
 start_link(Parent,Listener,Sender,Socket)->
     gen_server:start_link(?MODULE, [#state{parent=Parent,listener=Listener,sender=Sender,socket=Socket}],[]).
 
@@ -33,6 +34,11 @@ create(Parent,Listener,Sender,Socket)->
 
 send(Pid,Msg)->
     gen_server:cast(Pid,{send,Msg}).
+
+
+set_console(Pid,ConsolePid)->
+    Pid ! {set_console,ConsolePid}.
+
 
 %% ===================================================================
 %% gen_server callbacks
@@ -79,13 +85,18 @@ code_change(_OldVsn, State, _Extra) ->
 recv(State) ->
     Socket = State#state.socket,
     Parser = State#state.parser,
+    Console = State#state.console,
     lager:info("Waiting for data on: ~p", [Socket]),
     receive
 	{tcp, Socket, Data} ->
 	    lager:info("Received TCP data from ~p: ~p", [Socket, Data]),
 	    {ok, NewParser, Messages} = ofp_parser:parse(Parser,Data),
 	    lists:foreach(fun(Message) ->
-				  lager:info("Received Message from ~p: ~w", [Socket, Message])
+				  lager:info("Received Message from ~p: ~w", [Socket, Message]),
+				  case is_pid(Console) of
+				      true -> Console ! {self(),Message};
+				      _ -> ok
+				  end
 			  end, Messages),
 	    inet:setopts(Socket,[{active, once}]),
 	    recv(State#state{parser = NewParser});
@@ -93,8 +104,8 @@ recv(State) ->
 	    Sender = State#state.sender,
             lager:info("Socket ~p closed", [Socket]),
 	    loom_ofdp:socket_closed(Sender,Socket),
-	    exit(socket_closed)
-    end.
-		
-		    
+	    exit(socket_closed);
+	{set_console, ConsolePid} ->
+	    recv(State#state{console = ConsolePid})
+    end.		    
     

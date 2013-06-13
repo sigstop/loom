@@ -11,7 +11,7 @@
 -behavior(application).
 
 %% API
--export([get_sup_tree/0]).
+-export([get_sup_tree/0,get_msg/0]).
 
 %% Application callbacks
 -export([start/2,
@@ -40,6 +40,12 @@ get_sup_tree([Child|Rest],Acc)->
 		     Acc ++ [Child,get_sup_tree(Children,[])]
     end,
     get_sup_tree(Rest,NewAcc).
+
+
+get_msg()->
+    receive X -> io:format("~p~n",[X])
+    after 500 -> no_reply 
+    end.
     
     
     
