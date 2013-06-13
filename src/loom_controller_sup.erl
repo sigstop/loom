@@ -22,7 +22,7 @@
 
 -spec start_link(term()) -> {ok, pid()} | ignore | {error, term()}.
 start_link(Child)->
-    supervisor:start_link({local, loom_controller},?MODULE, [Child]).
+    supervisor:start_link(?MODULE, [Child]).
 
 get_pid(Id)->
     Parent = loom_sup:get_pid(),

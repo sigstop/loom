@@ -57,8 +57,8 @@ get_msg()->
 
 %% @doc Starts the application.
 -spec start(any(), any()) -> {ok, pid()}.
-start(_StartType, _StartArgs) ->
-    lager:info("Starting Loom..."),
+start(StartType, StartArgs) ->
+    lager:info("Starting Loom with Type ~p and Args ~p",[StartType,StartArgs]),
     loom_sup:start_link().
 
 %% @doc Stops the application.

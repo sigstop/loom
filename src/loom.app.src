@@ -8,5 +8,5 @@
 		  mnesia
                  ]},
   {mod, {loom, []}},
-  {env, []}
+  {env, [{default_controller_port,6633}]}
  ]}.

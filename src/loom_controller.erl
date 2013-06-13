@@ -14,13 +14,18 @@
 
 -record(state, {id, pid, port, sup}).
 
--export([start_link/2,broken_call/0,get_id/1]).
+-export([start_link/2,broken_call/0,get_id/1,start/2]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
 get_id(Pid)->
     gen_server:call(Pid, get_id).
+
+start(Name,Port)->
+    Sup = loom_sup:get_pid(),
+    Config = {controller, Name, Port},
+    loom_sup:start_controller(Sup,Config).
 
 start_link(ID,Port)->
     gen_server:start_link(?MODULE, [#state{id=ID,port=Port}], []).

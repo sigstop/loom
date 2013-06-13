@@ -11,7 +11,7 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/0,get_pid/0,get_children/0]).
+-export([start_link/0,get_pid/0,get_children/0,start_controller/2]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -23,7 +23,9 @@
 -spec start_link() -> {ok, pid()} | ignore | {error, term()}.
 start_link() ->
     {ok,Pid} = supervisor:start_link(?MODULE, []),
-    Config = [{controller, default, 6633}],
+    register(loom_sup,Pid),
+    {ok,Port} = application:get_env(loom,default_controller_port),
+    Config = [{controller, default, Port}],
     [start_controller(Pid,Controller) || Controller <- Config],
     {ok,Pid}.
 
@@ -41,7 +43,6 @@ get_children()->
 %% ===================================================================
 
 init([]) ->
-    register(loom_sup,self()),
     {ok, { {one_for_one, 5, 10}, []} }.
 
 %%------------------------------------------------------------------------------
