@@ -9,10 +9,17 @@
 	 get_flow_table_message/1,
 	 flow_stats_request/1,
 	 aggregate_stats_request/1,
-	 config_packet_in/1,
-         role_request/2]).
+	 config_packet_in/2,
+         role_request/2,
+         table_miss/1,
+         get_async_config/0]).
 
 -include("../include/loom.hrl").
+
+table_miss(TableId)->
+    Actions = actions_out_ports([controller]),
+    message(#ofp_flow_mod{table_id = TableId, command = add, priority = 0, match = #ofp_match{},
+			    instructions = [#ofp_instruction_apply_actions{actions = Actions}] }).
 
 remove_all_flows_mod()->
     #ofp_message{ type = flow_mod, 
@@ -144,11 +151,28 @@ body = #ofp_aggregate_stats_request {
     table_id = TableId }}.
 
 % possible values [no_match, action, invalid_ttl]
-config_packet_in(Param)->
+config_packet_in(Param1, Param2)->
 #ofp_message{version = 4,
-	     type = ofp_set_async,
+            xid = get_xid(),
 	     body = #ofp_set_async{
-	       packet_in_mask = {Param,Param},
+	       packet_in_mask = {Param1,Param2},
 	       port_status_mask = {[add, delete, modify],[add, delete, modify]},
 	       flow_removed_mask = {[idle_timeout, hard_timeout, delete, group_delete], [idle_timeout, hard_timeout, delete, group_delete]}
 	      }}.
+
+get_async_config() ->
+#ofp_message{version = 4,
+	     type = ofp_get_async_request,
+	     body = #ofp_get_async_request{}}.
+             
+
+%%% Helpers --------------------------------------------------------------------
+%%% just started this cleanup
+message(Body) ->
+    #ofp_message{version = 4,
+                 xid = 1,
+                 body = Body}.
+%%% instead of random, we could use now
+get_xid() ->
+    random:uniform(1 bsl 32 - 1).
+
