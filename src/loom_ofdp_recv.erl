@@ -92,12 +92,13 @@ recv(State) ->
 	    lager:info("Received TCP data from ~p: ~p", [Socket, Data]),
 	    {ok, NewParser, Messages} = ofp_parser:parse(Parser,Data),
 	    lists:foreach(fun(Message) ->
-				  lager:info("Received Message from ~p: ~w", [Socket, Message]),
-				  case is_pid(Console) of
-				      true -> Console ! {self(),Message};
-				      _ -> ok
-				  end
-			  end, Messages),
+		lager:info("Received Message from ~p: ~w", [Socket, Message]),
+		    case is_pid(Console) of
+			true -> Console ! {self(),Message};
+			_ -> ok
+		    end,
+                displayOFMessage(Message)                                
+	    end, Messages),
 	    inet:setopts(Socket,[{active, once}]),
 	    recv(State#state{parser = NewParser});
 	{tcp_closed, Socket} ->
@@ -108,4 +109,12 @@ recv(State) ->
 	{set_console, ConsolePid} ->
 	    recv(State#state{console = ConsolePid})
     end.		    
+
+
+%%% SN
+displayOFMessage(#ofp_message{type = features_reply,
+                              body = #ofp_features_reply{datapath_mac= Datapath_mac, datapath_id = Datapath_id}}) ->
+    io:format("Features:  DatapathMac = ~p, Datapath_id = ~p ~n", [Datapath_mac, Datapath_id]);
+displayOFMessage(Message) ->
+    io:format("Message: ~p~n", [Message]).
     
