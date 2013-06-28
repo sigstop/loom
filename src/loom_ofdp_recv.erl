@@ -12,8 +12,9 @@
 
 -include("../include/loom.hrl").
 
--record(state, {pid, console, parent, listener, sender, socket, address, port, sup, parser}).
-
+-record(state, {pid, console, parent, listener, sender, socket, address, port, sup, parser, message_cache}).
+                
+-record(cache, {features_reply, echo_reply}).
 %% API
 -export([start_link/4,create/4,send/2,set_console/2]).
 
@@ -48,7 +49,7 @@ set_console(Pid,ConsolePid)->
 init([State])->
     Pid = self(),
     {ok, Parser} = ofp_parser:new(4),
-    NewState = State#state{ pid = Pid, parser = Parser },
+    NewState = State#state{ pid = Pid, parser = Parser, message_cache=#cache{}},
     gen_server:cast(self(),recv),
     {ok,NewState}.
 
@@ -85,22 +86,15 @@ code_change(_OldVsn, State, _Extra) ->
 recv(State) ->
     Socket = State#state.socket,
     Parser = State#state.parser,
-    Console = State#state.console,
+    MessageCache = State#state.message_cache,
     lager:info("Waiting for data on: ~p", [Socket]),
     receive
 	{tcp, Socket, Data} ->
 	    lager:info("Received TCP data from ~p: ~p", [Socket, Data]),
 	    {ok, NewParser, Messages} = ofp_parser:parse(Parser,Data),
-	    lists:foreach(fun(Message) ->
-		lager:info("Received Message from ~p: ~w", [Socket, Message]),
-		    case is_pid(Console) of
-			true -> Console ! {self(),Message};
-			_ -> ok
-		    end,
-                displayOFMessage(Message)                                
-	    end, Messages),
+            NewMessageCache = processOFMessages(Messages, MessageCache, Socket),
 	    inet:setopts(Socket,[{active, once}]),
-	    recv(State#state{parser = NewParser});
+	    recv(State#state{parser = NewParser, message_cache = NewMessageCache});
 	{tcp_closed, Socket} ->
 	    Sender = State#state.sender,
             lager:info("Socket ~p closed", [Socket]),
@@ -110,11 +104,21 @@ recv(State) ->
 	    recv(State#state{console = ConsolePid})
     end.		    
 
+%%% [SN] process, cache and display OF message received by controller
+processOFMessages([], MessageCache, _) ->
+    MessageCache;
+processOFMessages(Messages, MessageCache, Socket) ->
+    [Message|Rest] = Messages,
+    NewMessageCache = processOFMessage(Message, MessageCache, Socket),
+    processOFMessages(Rest, NewMessageCache, Socket).
 
-%%% SN
-displayOFMessage(#ofp_message{type = features_reply,
-                              body = #ofp_features_reply{datapath_mac= Datapath_mac, datapath_id = Datapath_id}}) ->
-    io:format("Features:  DatapathMac = ~p, Datapath_id = ~p ~n", [Datapath_mac, Datapath_id]);
-displayOFMessage(Message) ->
-    io:format("Message: ~p~n", [Message]).
-    
+processOFMessage(#ofp_message{type = features_reply,body = #ofp_features_reply
+            {datapath_mac= Datapath_mac, datapath_id = Datapath_id}} =Message, MessageCache, Socket) ->
+    io:format("Received features_reply from ~p:  DatapathMac = ~p, Datapath_id = ~p ~n",
+        [Socket, Datapath_mac, Datapath_id]),
+    MessageCache#cache{features_reply = Message};
+processOFMessage(Message, MessageCache, Socket) ->
+    io:format("Received Message: ~p from ~p ~n", [Message, Socket]),
+    MessageCache.    
+
+
