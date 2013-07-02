@@ -3,9 +3,9 @@
 -export([
          hello/0, features_request/0, echo_request/0, echo_request/1, get_config_request/0,
          desc_request/0, flow_stats_request/1, aggregate_stats_request/1, table_stats_request/0,
-         port_stats_request/0, queue_stats_request/0, group_stats_request/0, group_desc_request/0,
+         port_stats_request/1, queue_stats_request/1, group_stats_request/0, group_desc_request/0,
          group_features_request/0, meter_stats_request/1, meter_config_request/1, meter_features_request/0,
-         table_features_request/1, port_desc_request/0, queue_get_config_request/1, get_async_config/0,
+         table_features_request/0, port_desc_request/0, queue_get_config_request/1, get_async_config/0,
          barrier_request/0,
          remove_all_flows_mod/0,forward_mod/2,forward_mod/4, get_flow_table_message/1,
 	 match_forward_mod/3, match_forward_mod/5, drop_loops_mod/2, drop_loops_mod1/2,
@@ -156,11 +156,13 @@ aggregate_stats_request(TableId) ->
 table_stats_request() ->
     message(#ofp_table_stats_request{}).
 
-port_stats_request() ->
-    message(#ofp_port_stats_request{port_no = any}).
+%port_no = any
+port_stats_request(PortNo) ->
+    message(#ofp_port_stats_request{port_no = PortNo}).
 
-queue_stats_request() ->
-    message(#ofp_queue_stats_request{port_no = any, queue_id = all}).
+%port_no = any
+queue_stats_request(PortNo) ->
+    message(#ofp_queue_stats_request{port_no = PortNo, queue_id = all}).
 
 group_stats_request() ->
     message(#ofp_group_stats_request{group_id = all}).
@@ -177,19 +179,19 @@ meter_stats_request(MeterId) ->
 
 % MeterId = interger(), slowpath, controller, all
 meter_config_request(MeterId) ->
-    message(#ofp_meter_config{meter_id = MeterId}).
+    message(#ofp_meter_config_request{meter_id = MeterId}).
 
 meter_features_request() ->
     message(#ofp_meter_features_request{}).
     
-table_features_request(TableId) ->
-    message(#ofp_table_features{table_id = TableId}).
+table_features_request() ->
+    message(#ofp_table_features_request{}).
 
 port_desc_request() ->
     message(#ofp_port_desc_request{}).
 
-queue_get_config_request(PortNum) ->
-    message(#ofp_queue_get_config_request{port=PortNum}).
+queue_get_config_request(PortNo) ->
+    message(#ofp_queue_get_config_request{port=PortNo}).
 
 % Change controller role: nochange, equal, master, slave
 role_request(Role, GenerationID)->
@@ -197,9 +199,6 @@ role_request(Role, GenerationID)->
 
 barrier_request() ->
     message(#ofp_barrier_request{}).
-
-queue_get_config_request() ->
-    message(#ofp_queue_get_config_request{port = any}).
     
 get_async_config() ->
     message(#ofp_get_async_request{}).

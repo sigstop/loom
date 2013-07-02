@@ -14,7 +14,10 @@
 
 -record(state, {pid, console, parent, listener, sender, socket, address, port, sup, parser, message_cache}).
                 
--record(cache, {features_reply, echo_reply}).
+-record(cache, {features_reply, echo_reply, get_config_reply, desc_reply, flow_stats_reply,
+                aggregate_stats_reply, table_stats_reply, port_stats_reply, queue_stats_reply,
+                group_stats_reply, group_desc_reply, group_features_reply, meter_features_reply,
+                meter_config_reply, table_features_reply, port_desc_reply, get_async_reply}).
 %% API
 -export([start_link/4,create/4,send/2,set_console/2]).
 
@@ -112,13 +115,76 @@ processOFMessages(Messages, MessageCache, Socket) ->
     NewMessageCache = processOFMessage(Message, MessageCache, Socket),
     processOFMessages(Rest, NewMessageCache, Socket).
 
-processOFMessage(#ofp_message{type = features_reply,body = #ofp_features_reply
-            {datapath_mac= Datapath_mac, datapath_id = Datapath_id}} =Message, MessageCache, Socket) ->
-    io:format("Received features_reply from ~p:  DatapathMac = ~p, Datapath_id = ~p ~n",
-        [Socket, Datapath_mac, Datapath_id]),
+processOFMessage(#ofp_message{body = #ofp_features_reply
+            {datapath_mac= DatapathMac, datapath_id = DatapathId}} =Message, MessageCache, Socket) ->
+    io:format("Received ofp_features_reply from ~p:  DatapathMac = ~p, Datapath_id = ~p ~n",
+        [Socket, DatapathMac, DatapathId]),
     MessageCache#cache{features_reply = Message};
+processOFMessage(#ofp_message{body = #ofp_get_config_reply
+        {flags = Flags, miss_send_len = MissSendLen}} =Message, MessageCache, Socket) ->
+    io:format("Received ofp_get_config_reply from ~p:  Flags = ~p, MissSendLen = ~p ~n",
+        [Socket, Flags, MissSendLen]),
+    MessageCache#cache{get_config_reply = Message};
+processOFMessage(#ofp_message{body = #ofp_desc_reply
+        {flags = Flags, mfr_desc = MfrDesc, hw_desc = HwDesc, sw_desc = SwDesc,
+         serial_num = SerialNum, dp_desc = DpDesc}} = Message, MessageCache, Socket) ->
+    io:format("Received ofp_desc_reply from ~p:  Flags = ~p, Mfr_desc = ~p, Hw_desc = ~p,
+            Sw_desc = ~p, Serial_num = ~p, Dp_desc = ~p~n",
+            [Socket, Flags, MfrDesc, HwDesc, SwDesc, SerialNum, DpDesc]),
+    MessageCache#cache{desc_reply = Message};   
+processOFMessage(#ofp_message{body = #ofp_flow_stats_reply{flags = Flags, body = Stats}} = Message,
+        MessageCache, Socket) ->
+    io:format("Received flow_stats_reply from ~p:  Flags = ~p Stats = ~p~n", [Socket, Flags, Stats]),
+    MessageCache#cache{flow_stats_reply = Message};
+processOFMessage(#ofp_message{body = #ofp_aggregate_stats_reply{flags = Flags, packet_count = PacketCount,
+        byte_count = ByteCount, flow_count = FlowCount}} = Message, MessageCache, Socket) ->
+    io:format("Received aggregate_stats_reply from ~p:  Flags = ~p, PacketCount = ~p, ByteCount = ~p,
+        FlowCount = ~p~n", [Socket, Flags, PacketCount, ByteCount, FlowCount]),
+    MessageCache#cache{aggregate_stats_reply = Message};
+processOFMessage(#ofp_message{body = #ofp_table_stats_reply{flags = Flags, body = Stats}} = Message, MessageCache, Socket) ->
+    io:format("Received table_stats_reply from ~p:  Flags = ~p, Stats = ~p~n", [Socket, Flags, Stats]),
+    MessageCache#cache{table_stats_reply = Message};      
+processOFMessage(#ofp_message{body = #ofp_port_stats_reply{flags = Flags, body = Stats}} = Message, MessageCache, Socket) ->
+    io:format("Received ports_stats_reply from ~p:  Flags = ~p, Stats = ~p~n", [Socket, Flags, Stats]),
+    MessageCache#cache{port_stats_reply = Message};
+processOFMessage(#ofp_message{body = #ofp_queue_stats_reply{flags = Flags, body = Stats}} = Message, MessageCache, Socket) ->
+    io:format("Received queue_stats_reply from ~p:  Flags = ~p, Stats = ~p~n", [Socket, Flags, Stats]),
+    MessageCache#cache{queue_stats_reply = Message};
+processOFMessage(#ofp_message{body = #ofp_group_stats_reply{flags = Flags, body = Stats}} = Message, MessageCache, Socket) ->
+    io:format("Received group_stats_reply from ~p:  Flags = ~p, Stats = ~p~n", [Socket, Flags, Stats]),
+    MessageCache#cache{group_stats_reply = Message};
+processOFMessage(#ofp_message{body = #ofp_group_desc_reply{flags = Flags, body = Stats}} = Message, MessageCache, Socket) ->
+    io:format("Received group_desc_reply from ~p:  Flags = ~p, Stats = ~p~n", [Socket, Flags, Stats]),
+    MessageCache#cache{group_desc_reply = Message};
+processOFMessage(#ofp_message{body = #ofp_group_features_reply{flags = Flags, types = Types,
+        capabilities = Capabilities, max_groups = MaxGroups, actions =Actions }} = Message, MessageCache, Socket) ->
+    io:format("Received group_features_reply from ~p:  Flags = ~p, Types = ~p, Capabilities = ~p,
+        MaxGroups=~p, Actions=~p~n", [Socket, Flags, Types, Capabilities, MaxGroups, Actions]),
+    MessageCache#cache{group_features_reply = Message};
+processOFMessage(#ofp_message{body = #ofp_meter_features_reply{flags = Flags, max_meter = MaxMeter,
+        band_types = BandTypes, capabilities = Capabilities, max_bands = MaxBands, max_color = MaxColor }} = Message, MessageCache, Socket) ->
+    io:format("Received meter_features_reply from ~p:  Flags = ~p, MaxMeter = ~p,
+        BandTypes = ~p, Capabilities = ~p, MaxBands = ~p, MaxColor= ~p~n", [Socket, Flags, MaxMeter,
+        BandTypes, Capabilities, MaxBands, MaxColor]),
+    MessageCache#cache{meter_features_reply = Message};
+processOFMessage(#ofp_message{body = #ofp_meter_config_reply{flags = Flags, body = Stats}} = Message, MessageCache, Socket) ->
+    io:format("Received meter_config_reply from ~p:  Flags = ~p, Stats = ~p~n", [Socket, Flags, Stats]),
+    MessageCache#cache{meter_config_reply = Message};
+processOFMessage(#ofp_message{body = #ofp_table_features_reply{flags = Flags, body = Stats}} = Message, MessageCache, Socket) ->
+    io:format("Received table_features_reply from ~p:  Flags = ~p, Stats = ~p~n", [Socket, Flags, Stats]),
+    MessageCache#cache{table_features_reply = Message};
+processOFMessage(#ofp_message{body = #ofp_port_desc_reply{flags = Flags, body = Stats}} = Message, MessageCache, Socket) ->
+    io:format("Received port_desc_reply from ~p:  Flags = ~p, Stats = ~p~n", [Socket, Flags, Stats]),
+    MessageCache#cache{port_desc_reply = Message};    
+processOFMessage(#ofp_message{body = #ofp_get_async_reply
+        { packet_in_mask = {[MPktInReason], [SPktInReason]},
+        port_status_mask = {[MPortStatReason], [SPortStatReason]},
+        flow_removed_mask = {[MFlowRemovedReason], [SFlowRemovedReason]}}}= Message, MessageCache, Socket) ->
+    io:format("Received get_async_reply from ~p:[{~p, ~p}, {~p, ~p} , {~p, ~p}]~n",
+        [Socket, MPktInReason, SPktInReason, MPortStatReason, SPortStatReason, MFlowRemovedReason, SFlowRemovedReason]),   
+    MessageCache#cache{get_async_reply = Message};
 processOFMessage(Message, MessageCache, Socket) ->
-    io:format("Received Message: ~p from ~p ~n", [Message, Socket]),
+    io:format("Received Message from ~p: ~p ~n", [Socket, Message]),
     MessageCache.    
 
 
