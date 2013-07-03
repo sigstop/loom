@@ -118,7 +118,8 @@ send_of_requests(Pid)->
 % results are very long : 256 tables in LINC
 %    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:table_stats_request()),
     loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:port_stats_request(any)),
-    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:queue_stats_request(any)),       
+% Getting error reponse for queue_stats_request: "Received Message from #Port<0.7204>: {ofp_message,4,error,1,{ofp_error_msg,queue_op_failed,bad_queue,<<>>}} 
+%    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:queue_stats_request(any)),       
     loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:group_stats_request()),
     loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:group_desc_request()),
     loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:group_features_request()),

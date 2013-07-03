@@ -203,7 +203,7 @@ process_packetin(_TableId, _Match, action, Data) ->
         E1:E2 ->
             lager:error("Pkt decapsulate error: ~p:~p", [E1, E2]),
             lager:error("Probably received malformed frame", []),
-            lager:error("With data: ~p", [Data]),
+            lager:error("With data: ~p", [Data])
     end;
 process_packetin(_TableId, _Match, nomatch, _Data) ->
     lager:info("packetin reason = nomatch~n");   
