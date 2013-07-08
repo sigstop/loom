@@ -17,9 +17,9 @@
 -record(cache, {features_reply, echo_reply, get_config_reply, desc_reply, flow_stats_reply,
                 aggregate_stats_reply, table_stats_reply, port_stats_reply, queue_stats_reply,
                 group_stats_reply, group_desc_reply, group_features_reply, meter_features_reply,
-                meter_config_reply, table_features_reply, port_desc_reply, get_async_reply}).
+                meter_config_reply, table_features_reply, port_desc_reply, get_async_reply, packetin::{[], []}}).
 %% API
--export([start_link/4,create/4,send/2,set_console/2]).
+-export([start_link/4,create/4,send/2,set_console/2, get_EthSrcList/0, get_EthDstList/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -42,8 +42,12 @@ send(Pid,Msg)->
 
 set_console(Pid,ConsolePid)->
     Pid ! {set_console,ConsolePid}.
-
-
+    
+get_EthSrcList()->
+    gen_server:call(?MODULE, {get_EthSrcList}).
+get_EthDstList()->
+    gen_server:call(?MODULE, {get_EthDstList}).
+    
 %% ===================================================================
 %% gen_server callbacks
 %% ===================================================================
@@ -52,10 +56,14 @@ set_console(Pid,ConsolePid)->
 init([State])->
     Pid = self(),
     {ok, Parser} = ofp_parser:new(4),
-    NewState = State#state{ pid = Pid, parser = Parser, message_cache=#cache{}},
+    NewState = State#state{ pid = Pid, parser = Parser, message_cache=#cache{packetin = {[],[]}}},
     gen_server:cast(self(),recv),
     {ok,NewState}.
 
+handle_call(get_EthSrcList, _From, #state{message_cache= #cache{packetin = {Reply, _}}} = State) ->
+    {reply, Reply, State};
+handle_call(get_EthDstList, _From, #state{message_cache= #cache{packetin = {_, Reply}}} = State) ->
+    {reply, Reply, State};   
 handle_call(Request, _From, State) ->
     io:format("GOT UNKNOWN CALL REQUEST: ~p~n",[Request]),
     Reply = ok,
@@ -185,27 +193,58 @@ process_message(#ofp_message{body = #ofp_get_async_reply
     MessageCache#cache{get_async_reply = Message};
 process_message(#ofp_message{body = #ofp_packet_in
         {table_id = TableId, match = Match, reason = Reason, cookie = Cookie, data = Data}}, MessageCache, Socket) ->
-    io:format("Received packet_in from ~p:  TableId = ~p, Match = ~p, Reason = ~p Cookie =~p~n",
-        [Socket, TableId, Match, Reason, Cookie]),
-    process_packetin(TableId, Match, Reason, Data),
-    MessageCache;
+%   io:format("Received packet_in from ~p:  TableId = ~p, Match = ~p, Reason = ~p Cookie =~p~n",
+%        [Socket, TableId, Match, Reason, Cookie]),
+    process_packetin(Reason, TableId, Match, Data, MessageCache);
 process_message(Message, MessageCache, Socket) ->
     io:format("Received Message from ~p: ~p ~n", [Socket, Message]),
     MessageCache.    
 
-process_packetin(_TableId, _Match, action, Data) ->
+%packetin on action 
+%MacList is a list of tuples of {Mac address, Count}, Source and Destination Macs are stored separately
+% Max len of list is 100
+
+process_packetin(action, _TableId, _Match, Data, #cache{packetin = {EthSrcList, EthDstList}} = MessageCache) ->
     try
         [EthHeader | _] = pkt:decapsulate(Data),
         EthSrc = EthHeader#ether.shost,
         EthDst = EthHeader#ether.dhost,
-        lager:info("packetin reason = action, EthSrc = ~p, EthDSt = ~p~n", [EthSrc, EthDst])
+        case lists:keyfind(EthSrc, 1, EthSrcList) of 
+            false ->
+                NEthSrcList = lists:sublist([{EthSrc, 1} | EthSrcList], 100);
+            {EthSrc, SCount} ->
+                NEthSrcList = lists:keyreplace(EthSrc, 1, EthSrcList, {EthSrc, SCount+1})
+        end,
+        case lists:keyfind(EthDst, 1, EthDstList) of
+            false ->
+                NEthDstList = lists:sublist([{EthDst, 1} | EthDstList], 100);
+            {EthDst, DCount} ->
+                NEthDstList = lists:keyreplace(EthDst, 1, EthDstList, {EthDst, DCount+1})
+        end,
+        lager:info("packetin reason = action, EthSrc = ~18s, EthDSt = ~18s ~n",
+            [binary_to_hex(EthSrc), binary_to_hex(EthDst)]),
+        MessageCache#cache{packetin = {NEthSrcList, NEthDstList}}      
     catch
         E1:E2 ->
             lager:error("Pkt decapsulate error: ~p:~p", [E1, E2]),
             lager:error("Probably received malformed frame", []),
-            lager:error("With data: ~p", [Data])
+            lager:error("With data: ~p", [Data])            
     end;
-process_packetin(_TableId, _Match, nomatch, _Data) ->
-    lager:info("packetin reason = nomatch~n");   
-process_packetin(_TableId, _Match, Reason, _Data) ->
-    lager:info("packetin reason = ~p~n", [Reason]).
+%% packetin on table miss - right now doing nothing, so only proactive
+process_packetin(nomatch, _TableId, _Match, _Data, MessageCache) ->
+    lager:info("packetin reason = nomatch~n"),
+    MessageCache;
+process_packetin(Reason, _TableId, _Match, _Data, MessageCache) ->
+    lager:info("packetin reason = ~p~n", [Reason]),
+    MessageCache.
+    
+%% utilities
+%%from of_controller_vr.erl
+binary_to_hex(Bin) ->
+    binary_to_hex(Bin, "").
+binary_to_hex(<<>>, Result) ->
+    Result;
+binary_to_hex(<<B:8, Rest/bits>>, Result) ->
+    Hex = erlang:integer_to_list(B, 16),
+    NewResult = Result ++ ":" ++ Hex,
+    binary_to_hex(Rest, NewResult).
