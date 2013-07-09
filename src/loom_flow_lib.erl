@@ -9,10 +9,22 @@
          barrier_request/0,
          remove_all_flows_mod/0,forward_mod/2,forward_mod/4, get_flow_table_message/1,
 	 match_forward_mod/3, match_forward_mod/5, drop_loops_mod/2, drop_loops_mod1/2,
-	 config_packet_in/2, role_request/2, table_miss_flow_mod/1]).
+	 config_packet_in/2, role_request/2, table_miss_flow_mod/1, tap_forward/4]).
 
 -include("../include/loom.hrl").
 
+%tap packets to controller
+tap_forward(Port1, Port2, IPv4Dst, TCPDst) ->
+    Actions = actions_out_ports([Port2, controller]),
+    Match = #ofp_match{fields = [#ofp_field{name = in_port, value = <<Port1:32>>},
+                                 #ofp_field{name = eth_type, value = <<8,0>>},
+                                 #ofp_field{name = ipv4_dst, value = IPv4Dst},
+                                 #ofp_field{name = ip_proto, value = <<6:8>>},
+                                 #ofp_field{name = tcp_dst, value = TCPDst}]},
+    Instruction = #ofp_instruction_apply_actions{actions = Actions},    
+    message(#ofp_flow_mod{table_id = 0, command = add, priority = 101,
+            match = Match, instructions = [Instruction]}).
+                          
 % match everything, and priority = 0
 table_miss_flow_mod(TableId) ->
     Action = #ofp_action_output{port = controller},
@@ -24,8 +36,6 @@ table_miss_flow_mod(TableId) ->
 
 remove_all_flows_mod() ->
     message(#ofp_flow_mod{command = delete}).
-
- %%#ofp_message{ version = 4, type = flow_mod, body = #ofp_flow_mod{table_id = 0,command = add, priority = 1,idle_timeout = 30000, hard_timeout = 60000, cookie = <<0,0,0,0,0,0,0,10>>,cookie_mask = <<0,0,0,0,0,0,0,0>>,match = #ofp_match{fields = [#ofp_field{ class = openflow_basic, name = in_port, value = <<InPort:32>>, has_mask = false}]}, instructions = [#ofp_instruction_apply_actions{actions = Actions }] } }.
 
 forward_mod(InPort,OutPorts)->
     forward_mod(InPort,OutPorts,100,[]).
@@ -48,13 +58,6 @@ forward_mod(InPort,OutPorts,Priority,Flags)->
 						       value = <<InPort:32>>, 
 						       has_mask = false}]}, 
 		   instructions = [#ofp_instruction_apply_actions{actions = Actions }] } }.
-
-%match_forward_mod(InPort,EthDst,IPv4Dst,OutPorts)->
-%    Match1 = match_port_eth_dst(InPort,EthDst),
-%    Match2 = match_port_ipv4_dst(InPort,IPv4Dst),
-%    Matches = [Match1,Match2],
-%    Actions = actions_out_ports(OutPorts),
-%    _FlowMod = match_action_mod(Matches,Actions).
 
 
 drop_loops_mod(InPort,IPv4Dst)->
@@ -87,10 +90,6 @@ drop_loops_mod1(InPort,EthDst)->
     Match = match_port_eth_dst(InPort,EthDst),
     Actions = actions_out_ports([7]),
     #ofp_message{ version = 4, type = flow_mod, body = #ofp_flow_mod{table_id = 0,command = add, priority = 200,idle_timeout = 30000, hard_timeout = 60000, cookie = <<0,0,0,0,0,0,0,10>>,cookie_mask = <<0,0,0,0,0,0,0,0>>,match = Match, instructions = [#ofp_instruction_apply_actions{actions = Actions } ]} }.
-
-match_action_mod(Matches,Actions)->
-#ofp_message{ version = 4, type = flow_mod, body = #ofp_flow_mod{table_id = 0,command = add, priority =100,idle_timeout = 30000, hard_timeout = 60000, cookie = <<0,0,0,0,0,0,0,10>>,cookie_mask = <<0,0,0,0,0,0,0,0>>,match = Matches, instructions = [#ofp_instruction_apply_actions{actions = Actions }] } }.
-
 
 actions_out_ports(OutPorts)->
     [ #ofp_action_output{ max_len = 64, port = OutPort} || OutPort <- OutPorts ].

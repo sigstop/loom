@@ -19,7 +19,7 @@
                 group_stats_reply, group_desc_reply, group_features_reply, meter_features_reply,
                 meter_config_reply, table_features_reply, port_desc_reply, get_async_reply, packetin::{[], []}}).
 %% API
--export([start_link/4,create/4,send/2,set_console/2, get_EthSrcList/0, get_EthDstList/0]).
+-export([start_link/4,create/4,send/2,set_console/2, get_eth_src_list/0, get_eth_dst_list/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -39,14 +39,14 @@ create(Parent,Listener,Sender,Socket)->
 send(Pid,Msg)->
     gen_server:cast(Pid,{send,Msg}).
 
-
 set_console(Pid,ConsolePid)->
     Pid ! {set_console,ConsolePid}.
     
-get_EthSrcList()->
-    gen_server:call(?MODULE, {get_EthSrcList}).
-get_EthDstList()->
-    gen_server:call(?MODULE, {get_EthDstList}).
+get_eth_src_list()->
+    io:format("in get_eth_src_list~n"),
+    gen_server:call(?MODULE, get_eth_src_list).
+get_eth_dst_list()->
+    gen_server:call(?MODULE, get_eth_dst_list).
     
 %% ===================================================================
 %% gen_server callbacks
@@ -60,10 +60,15 @@ init([State])->
     gen_server:cast(self(),recv),
     {ok,NewState}.
 
-handle_call(get_EthSrcList, _From, #state{message_cache= #cache{packetin = {Reply, _}}} = State) ->
-    {reply, Reply, State};
-handle_call(get_EthDstList, _From, #state{message_cache= #cache{packetin = {_, Reply}}} = State) ->
-    {reply, Reply, State};   
+handle_call(get_eth_src_list, _From, State) ->
+    io:format("in handle_call get_eth_src_list~n"),
+    Cache = State#state.message_cache,
+    {EthSrcList, _} = Cache#cache.packetin,
+    {reply, {ok, EthSrcList}, State};
+handle_call(get_eth_dst_list, _From, State) ->
+    Cache = State#state.message_cache,
+    {_, EthDstList} = Cache#cache.packetin,
+    {reply, {ok, EthDstList}, State};
 handle_call(Request, _From, State) ->
     io:format("GOT UNKNOWN CALL REQUEST: ~p~n",[Request]),
     Reply = ok,
@@ -192,7 +197,7 @@ process_message(#ofp_message{body = #ofp_get_async_reply
         [Socket, MPktInReason, SPktInReason, MPortStatReason, SPortStatReason, MFlowRemovedReason, SFlowRemovedReason]),   
     MessageCache#cache{get_async_reply = Message};
 process_message(#ofp_message{body = #ofp_packet_in
-        {table_id = TableId, match = Match, reason = Reason, cookie = Cookie, data = Data}}, MessageCache, Socket) ->
+        {table_id = TableId, match = Match, reason = Reason, data = Data}}, MessageCache, _Socket) ->
 %   io:format("Received packet_in from ~p:  TableId = ~p, Match = ~p, Reason = ~p Cookie =~p~n",
 %        [Socket, TableId, Match, Reason, Cookie]),
     process_packetin(Reason, TableId, Match, Data, MessageCache);
@@ -203,7 +208,6 @@ process_message(Message, MessageCache, Socket) ->
 %packetin on action 
 %MacList is a list of tuples of {Mac address, Count}, Source and Destination Macs are stored separately
 % Max len of list is 100
-
 process_packetin(action, _TableId, _Match, Data, #cache{packetin = {EthSrcList, EthDstList}} = MessageCache) ->
     try
         [EthHeader | _] = pkt:decapsulate(Data),
@@ -239,7 +243,7 @@ process_packetin(Reason, _TableId, _Match, _Data, MessageCache) ->
     MessageCache.
     
 %% utilities
-%%from of_controller_vr.erl
+%%from of_controller_v4.erl
 binary_to_hex(Bin) ->
     binary_to_hex(Bin, "").
 binary_to_hex(<<>>, Result) ->
