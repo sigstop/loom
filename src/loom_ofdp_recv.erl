@@ -19,7 +19,7 @@
                 group_stats_reply, group_desc_reply, group_features_reply, meter_features_reply,
                 meter_config_reply, table_features_reply, port_desc_reply, get_async_reply, packetin::{[], []}}).
 %% API
--export([start_link/4,create/4,send/2,set_console/2, get_eth_src_list/0, get_eth_dst_list/0]).
+-export([start_link/4,create/4,send/2,set_console/2, get_eth_src_list/1, get_eth_dst_list/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -42,11 +42,11 @@ send(Pid,Msg)->
 set_console(Pid,ConsolePid)->
     Pid ! {set_console,ConsolePid}.
     
-get_eth_src_list()->
-    io:format("in get_eth_src_list~n"),
-    gen_server:call(?MODULE, get_eth_src_list).
-get_eth_dst_list()->
-    gen_server:call(?MODULE, get_eth_dst_list).
+get_eth_src_list(Pid)->
+    Pid ! {get_eth_src_list}.
+
+get_eth_dst_list(Pid)->
+    Pid ! {get_eth_dst_list}.
     
 %% ===================================================================
 %% gen_server callbacks
@@ -58,17 +58,9 @@ init([State])->
     {ok, Parser} = ofp_parser:new(4),
     NewState = State#state{ pid = Pid, parser = Parser, message_cache=#cache{packetin = {[],[]}}},
     gen_server:cast(self(),recv),
+    io:format("in ofdp_recv init Pid = ~p~n", [self()]),    
     {ok,NewState}.
 
-handle_call(get_eth_src_list, _From, State) ->
-    io:format("in handle_call get_eth_src_list~n"),
-    Cache = State#state.message_cache,
-    {EthSrcList, _} = Cache#cache.packetin,
-    {reply, {ok, EthSrcList}, State};
-handle_call(get_eth_dst_list, _From, State) ->
-    Cache = State#state.message_cache,
-    {_, EthDstList} = Cache#cache.packetin,
-    {reply, {ok, EthDstList}, State};
 handle_call(Request, _From, State) ->
     io:format("GOT UNKNOWN CALL REQUEST: ~p~n",[Request]),
     Reply = ok,
@@ -116,6 +108,16 @@ recv(State) ->
             lager:info("Socket ~p closed", [Socket]),
 	    loom_ofdp:socket_closed(Sender,Socket),
 	    exit(socket_closed);
+        {get_eth_src_list} ->
+            Cache = State#state.message_cache,
+            {EthSrcList, _} = Cache#cache.packetin,
+            print_eth_list(EthSrcList),
+            recv(State);
+        {get_eth_dst_list} ->
+            Cache = State#state.message_cache,
+            {_, EthDstList} = Cache#cache.packetin,
+            print_eth_list(EthDstList),
+            recv(State);
 	{set_console, ConsolePid} ->
 	    recv(State#state{console = ConsolePid})
     end.		    
@@ -206,7 +208,8 @@ process_message(Message, MessageCache, Socket) ->
     MessageCache.    
 
 %packetin on action 
-%MacList is a list of tuples of {Mac address, Count}, Source and Destination Macs are stored separately
+%EthSrcList is a list of tuples of {EthSrc, Count}
+%EthDstList is a list of tuples of {EthDst, Count}
 % Max len of list is 100
 process_packetin(action, _TableId, _Match, Data, #cache{packetin = {EthSrcList, EthDstList}} = MessageCache) ->
     try
@@ -252,3 +255,11 @@ binary_to_hex(<<B:8, Rest/bits>>, Result) ->
     Hex = erlang:integer_to_list(B, 16),
     NewResult = Result ++ ":" ++ Hex,
     binary_to_hex(Rest, NewResult).
+
+% List consists of tuples {EthAdrs, Count}
+print_eth_list([]) ->
+    ok;
+print_eth_list([{Eth, Count}|Rest]) ->
+    io:format("Eth = ~18s, Count = ~p~n", [binary_to_hex(Eth), Count]),
+    print_eth_list(Rest).
+    

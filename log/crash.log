@@ -1,0 +1,22 @@
+2013-07-18 14:28:35 =CRASH REPORT====
+  crasher:
+    initial call: loom_ofdp_recv:init/1
+    pid: <0.92.0>
+    registered_name: []
+    exception exit: {{badarg,[{io,format,[<0.81.0>,"in ofdp_recv init Pid = ~p~n",<0.92.0>],[]},{loom_ofdp_recv,init,1,[{file,"src/loom_ofdp_recv.erl"},{line,61}]},{gen_server,init_it,6,[{file,"gen_server.erl"},{line,304}]},{proc_lib,init_p_do_apply,3,[{file,"proc_lib.erl"},{line,239}]}]},[{gen_server,init_it,6,[{file,"gen_server.erl"},{line,328}]},{proc_lib,init_p_do_apply,3,[{file,"proc_lib.erl"},{line,239}]}]}
+    ancestors: [<0.88.0>,<0.84.0>,loom_sup,<0.82.0>]
+    messages: [{'$gen_cast',recv}]
+    links: [<0.88.0>]
+    dictionary: []
+    trap_exit: false
+    status: running
+    heap_size: 610
+    stack_size: 27
+    reductions: 140
+  neighbours:
+2013-07-18 14:28:35 =SUPERVISOR REPORT====
+     Supervisor: {<0.88.0>,loom_ofdp_recv_sup}
+     Context:    child_terminated
+     Reason:     {badarg,[{io,format,[<0.81.0>,"in ofdp_recv init Pid = ~p~n",<0.92.0>],[]},{loom_ofdp_recv,init,1,[{file,"src/loom_ofdp_recv.erl"},{line,61}]},{gen_server,init_it,6,[{file,"gen_server.erl"},{line,304}]},{proc_lib,init_p_do_apply,3,[{file,"proc_lib.erl"},{line,239}]}]}
+     Offender:   [{pid,<0.92.0>},{name,loom_ofdp_recv},{mfargs,{loom_ofdp_recv,start_link,undefined}},{restart_type,temporary},{shutdown,5000},{child_type,worker}]
+
