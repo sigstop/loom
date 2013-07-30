@@ -1,7 +1,8 @@
 -module(my_controller).
 
 -compile([export_all]).
--export([start/0,start/1,dp_link/3,dp_forward/3,match_forward/4,drop_loops/2,drop_loops1/2,dp_link_and_tap/4,dp_link_and_tap2/4, dp_clear/1]).
+-export([start/0,start/1,dp_link/3,dp_forward/3,match_forward/4,drop_loops/2,drop_loops1/2,
+         dp_link_and_tap/4,dp_link_and_tap2/4, dp_clear/1, send_of_requests/1]).
 
 start()->
     loom_controller:start().
@@ -97,11 +98,43 @@ get_flow_table(TableId)->
     Mod = loom_flow_lib:get_flow_table_message(TableId),
     loom_controller:broadcast_flow_mod(Mod).
 
-config_packet_in(Param)->
-    Mod = loom_flow_lib:config_packet_in(Param),
-    loom_controller:broadcast_flow_mod(Mod).
-
 role_request(Role)->
     GenId = 1,
     Request = loom_flow_lib:role_request(Role, GenId),
     loom_controller:broadcast_flow_mod(Request).
+
+%% send requests to dp to get all config, status and stats from switch
+send_of_requests(Pid)->
+    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:features_request()),
+    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:echo_request()),
+    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:get_config_request()),
+    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:desc_request()),
+    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:flow_stats_request(0)),
+    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:aggregate_stats_request(0)),
+% results are very long : 256 tables in LINC
+%    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:table_stats_request()),
+    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:port_stats_request(any)),
+% Getting error reponse for queue_stats_request: "Received Message from #Port<0.7204>: {ofp_message,4,error,1,{ofp_error_msg,queue_op_failed,bad_queue,<<>>}} 
+%    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:queue_stats_request(any)),      ___ NEED TO REPORT BUG 
+    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:group_stats_request()),
+    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:group_desc_request()),
+    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:group_features_request()),
+    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:meter_stats_request(all)),
+    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:meter_config_request(1)),
+    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:meter_features_request()),
+% results are very long : 256 tables in LINC
+%    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:table_features_request()),
+    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:port_desc_request()),
+    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:queue_get_config_request(all)),
+    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:role_request(nochange, 100)),
+    loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:get_async_config()).
+
+% Send packet to controller if Dest port number = 53, Dest IP = DNS server IP
+% Also send packet to output port in any case.
+tap_port53(Port1, Port2, DstIP, Pid)->
+    M = loom_flow_lib:tap_forward(Port1, Port2, DstIP, 53),
+    loom_ofdp:send_ofp_msg(Pid, M),
+    M1 = loom_flow_lib:forward_mod(Port1,[Port2]),
+    loom_ofdp:send_ofp_msg(Pid,M1),
+    M2 = loom_flow_lib:forward_mod(Port2,[Port1]),
+    loom_ofdp:send_ofp_msg(Pid,M2).    

@@ -3,16 +3,28 @@
 -export([
          hello/0, features_request/0, echo_request/0, echo_request/1, get_config_request/0,
          desc_request/0, flow_stats_request/1, aggregate_stats_request/1, table_stats_request/0,
-         port_stats_request/0, queue_stats_request/0, group_stats_request/0, group_desc_request/0,
+         port_stats_request/1, queue_stats_request/1, group_stats_request/0, group_desc_request/0,
          group_features_request/0, meter_stats_request/1, meter_config_request/1, meter_features_request/0,
-         table_features_request/1, port_desc_request/0, queue_get_config_request/1, get_async_config/0,
+         table_features_request/0, port_desc_request/0, queue_get_config_request/1, get_async_config/0,
          barrier_request/0,
          remove_all_flows_mod/0,forward_mod/2,forward_mod/4, get_flow_table_message/1,
 	 match_forward_mod/3, match_forward_mod/5, drop_loops_mod/2, drop_loops_mod1/2,
-	 config_packet_in/2, role_request/2, table_miss_flow_mod/1]).
+	 config_packet_in/2, role_request/2, table_miss_flow_mod/1, tap_forward/4]).
 
 -include("../include/loom.hrl").
 
+%tap packets to controller
+tap_forward(Port1, Port2, IPv4Dst, TCPDst) ->
+    Actions = actions_out_ports([Port2, controller]),
+    Match = #ofp_match{fields = [#ofp_field{name = in_port, value = <<Port1:32>>},
+                                 #ofp_field{name = eth_type, value = <<8,0>>},
+                                 #ofp_field{name = ipv4_dst, value = IPv4Dst},
+                                 #ofp_field{name = ip_proto, value = <<6:8>>},
+                                 #ofp_field{name = tcp_dst, value = TCPDst}]},
+    Instruction = #ofp_instruction_apply_actions{actions = Actions},    
+    message(#ofp_flow_mod{table_id = 0, command = add, priority = 101,
+            match = Match, instructions = [Instruction]}).
+                          
 % match everything, and priority = 0
 table_miss_flow_mod(TableId) ->
     Action = #ofp_action_output{port = controller},
@@ -24,8 +36,6 @@ table_miss_flow_mod(TableId) ->
 
 remove_all_flows_mod() ->
     message(#ofp_flow_mod{command = delete}).
-
- %%#ofp_message{ version = 4, type = flow_mod, body = #ofp_flow_mod{table_id = 0,command = add, priority = 1,idle_timeout = 30000, hard_timeout = 60000, cookie = <<0,0,0,0,0,0,0,10>>,cookie_mask = <<0,0,0,0,0,0,0,0>>,match = #ofp_match{fields = [#ofp_field{ class = openflow_basic, name = in_port, value = <<InPort:32>>, has_mask = false}]}, instructions = [#ofp_instruction_apply_actions{actions = Actions }] } }.
 
 forward_mod(InPort,OutPorts)->
     forward_mod(InPort,OutPorts,100,[]).
@@ -48,13 +58,6 @@ forward_mod(InPort,OutPorts,Priority,Flags)->
 						       value = <<InPort:32>>, 
 						       has_mask = false}]}, 
 		   instructions = [#ofp_instruction_apply_actions{actions = Actions }] } }.
-
-%match_forward_mod(InPort,EthDst,IPv4Dst,OutPorts)->
-%    Match1 = match_port_eth_dst(InPort,EthDst),
-%    Match2 = match_port_ipv4_dst(InPort,IPv4Dst),
-%    Matches = [Match1,Match2],
-%    Actions = actions_out_ports(OutPorts),
-%    _FlowMod = match_action_mod(Matches,Actions).
 
 
 drop_loops_mod(InPort,IPv4Dst)->
@@ -87,10 +90,6 @@ drop_loops_mod1(InPort,EthDst)->
     Match = match_port_eth_dst(InPort,EthDst),
     Actions = actions_out_ports([7]),
     #ofp_message{ version = 4, type = flow_mod, body = #ofp_flow_mod{table_id = 0,command = add, priority = 200,idle_timeout = 30000, hard_timeout = 60000, cookie = <<0,0,0,0,0,0,0,10>>,cookie_mask = <<0,0,0,0,0,0,0,0>>,match = Match, instructions = [#ofp_instruction_apply_actions{actions = Actions } ]} }.
-
-match_action_mod(Matches,Actions)->
-#ofp_message{ version = 4, type = flow_mod, body = #ofp_flow_mod{table_id = 0,command = add, priority =100,idle_timeout = 30000, hard_timeout = 60000, cookie = <<0,0,0,0,0,0,0,10>>,cookie_mask = <<0,0,0,0,0,0,0,0>>,match = Matches, instructions = [#ofp_instruction_apply_actions{actions = Actions }] } }.
-
 
 actions_out_ports(OutPorts)->
     [ #ofp_action_output{ max_len = 64, port = OutPort} || OutPort <- OutPorts ].
@@ -156,11 +155,13 @@ aggregate_stats_request(TableId) ->
 table_stats_request() ->
     message(#ofp_table_stats_request{}).
 
-port_stats_request() ->
-    message(#ofp_port_stats_request{port_no = any}).
+%port_no = any
+port_stats_request(PortNo) ->
+    message(#ofp_port_stats_request{port_no = PortNo}).
 
-queue_stats_request() ->
-    message(#ofp_queue_stats_request{port_no = any, queue_id = all}).
+%port_no = any
+queue_stats_request(PortNo) ->
+    message(#ofp_queue_stats_request{port_no = PortNo, queue_id = all}).
 
 group_stats_request() ->
     message(#ofp_group_stats_request{group_id = all}).
@@ -177,19 +178,19 @@ meter_stats_request(MeterId) ->
 
 % MeterId = interger(), slowpath, controller, all
 meter_config_request(MeterId) ->
-    message(#ofp_meter_config{meter_id = MeterId}).
+    message(#ofp_meter_config_request{meter_id = MeterId}).
 
 meter_features_request() ->
     message(#ofp_meter_features_request{}).
     
-table_features_request(TableId) ->
-    message(#ofp_table_features{table_id = TableId}).
+table_features_request() ->
+    message(#ofp_table_features_request{}).
 
 port_desc_request() ->
     message(#ofp_port_desc_request{}).
 
-queue_get_config_request(PortNum) ->
-    message(#ofp_queue_get_config_request{port=PortNum}).
+queue_get_config_request(PortNo) ->
+    message(#ofp_queue_get_config_request{port=PortNo}).
 
 % Change controller role: nochange, equal, master, slave
 role_request(Role, GenerationID)->
@@ -197,9 +198,6 @@ role_request(Role, GenerationID)->
 
 barrier_request() ->
     message(#ofp_barrier_request{}).
-
-queue_get_config_request() ->
-    message(#ofp_queue_get_config_request{port = any}).
     
 get_async_config() ->
     message(#ofp_get_async_request{}).
