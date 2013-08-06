@@ -110,6 +110,7 @@ recv(State) ->
 	    exit(socket_closed);
         {get_eth_src_list} ->
             Cache = State#state.message_cache,
+ %           io:format("Cache ~p~n", [Cache#cache.packetin]),
             {EthSrcList, _} = Cache#cache.packetin,
             print_eth_list(EthSrcList),
             recv(State);
@@ -234,8 +235,9 @@ process_packetin(action, _TableId, _Match, Data, #cache{packetin = {EthSrcList, 
     catch
         E1:E2 ->
             lager:error("Pkt decapsulate error: ~p:~p", [E1, E2]),
-            lager:error("Probably received malformed frame", []),
-            lager:error("With data: ~p", [Data])            
+%            lager:error("Probably received malformed frame", []),
+%            lager:error("With data: ~p", [Data]),
+            MessageCache
     end;
 %% packetin on table miss - right now doing nothing, so only proactive
 process_packetin(nomatch, _TableId, _Match, _Data, MessageCache) ->
