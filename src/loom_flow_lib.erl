@@ -13,14 +13,13 @@
 
 -include("../include/loom.hrl").
 
-%tap packets to controller
-tap_forward(Port1, Port2, IPv4Dst, TCPDst) ->
-    Actions = actions_out_ports([Port2, controller]),
+%tap packets to controller for given port number and tcp
+tap_forward(Port1, Port2, Port3, DPort) ->
+    Actions = actions_out_ports([Port2, Port3]),
     Match = #ofp_match{fields = [#ofp_field{name = in_port, value = <<Port1:32>>},
-                                 #ofp_field{name = eth_type, value = <<8,0>>},
-                                 #ofp_field{name = ipv4_dst, value = IPv4Dst},
-                                 #ofp_field{name = ip_proto, value = <<6:8>>},
-                                 #ofp_field{name = tcp_dst, value = TCPDst}]},
+                                 #ofp_field{name = eth_type, value = <<16#800:16>>},
+                                 #ofp_field{name = ip_proto, value =  <<17:8>>},
+                                 #ofp_field{name = udp_dst, value = <<DPort:16>>}]},
     Instruction = #ofp_instruction_apply_actions{actions = Actions},    
     message(#ofp_flow_mod{table_id = 0, command = add, priority = 101,
             match = Match, instructions = [Instruction]}).

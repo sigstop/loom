@@ -98,7 +98,7 @@ recv(State) ->
     lager:info("Waiting for data on: ~p", [Socket]),
     receive
 	{tcp, Socket, Data} ->
-	    lager:info("Received TCP data from ~p: ~p", [Socket, Data]),
+	    lager:info("Received TCP data from ~p", [Socket]),
 	    {ok, NewParser, Messages} = ofp_parser:parse(Parser,Data),
             NewMessageCache = process_messages(Messages, MessageCache, Socket),
 	    inet:setopts(Socket,[{active, once}]),
@@ -110,7 +110,6 @@ recv(State) ->
 	    exit(socket_closed);
         {get_eth_src_list} ->
             Cache = State#state.message_cache,
- %           io:format("Cache ~p~n", [Cache#cache.packetin]),
             {EthSrcList, _} = Cache#cache.packetin,
             print_eth_list(EthSrcList),
             recv(State);
@@ -234,7 +233,7 @@ process_packetin(action, _TableId, _Match, Data, #cache{packetin = {EthSrcList, 
         MessageCache#cache{packetin = {NEthSrcList, NEthDstList}}      
     catch
         E1:E2 ->
-            lager:error("Pkt decapsulate error: ~p:~p", [E1, E2]),
+%            lager:error("Pkt decapsulate error: ~p:~p", [E1, E2]),
 %            lager:error("Probably received malformed frame", []),
 %            lager:error("With data: ~p", [Data]),
             MessageCache

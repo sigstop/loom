@@ -2,7 +2,7 @@
 
 -compile([export_all]).
 -export([start/0,start/1,dp_link/3,dp_forward/3,match_forward/4,drop_loops/2,drop_loops1/2,
-         dp_link_and_tap/4,dp_link_and_tap2/4, dp_clear/1, send_of_requests/1]).
+         dp_link_and_tap/4,dp_link_and_tap2/4, dp_clear/1, send_of_requests/1, tap_tcp_port/5, test_tap/0]).
 
 start()->
     loom_controller:start().
@@ -129,12 +129,22 @@ send_of_requests(Pid)->
     loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:role_request(nochange, 100)),
     loom_ofdp:send_ofp_msg(Pid, loom_flow_lib:get_async_config()).
 
-% Send packet to controller if Dest port number = 53, Dest IP = DNS server IP
+% Send packet to controller if tcp dst port = TcpPort
 % Also send packet to output port in any case.
-tap_port53(Port1, Port2, DstIP, Pid)->
-    M = loom_flow_lib:tap_forward(Port1, Port2, DstIP, 53),
+tap_tcp_port(Port1, Port2, Port3, TcpPort, Pid)->
+    M = loom_flow_lib:tap_forward(Port1, Port2, Port3, TcpPort),
     loom_ofdp:send_ofp_msg(Pid, M),
+    M0 = loom_flow_lib:tap_forward(Port2, Port1, Port3, TcpPort),
+    loom_ofdp:send_ofp_msg(Pid, M0),
     M1 = loom_flow_lib:forward_mod(Port1,[Port2]),
     loom_ofdp:send_ofp_msg(Pid,M1),
     M2 = loom_flow_lib:forward_mod(Port2,[Port1]),
-    loom_ofdp:send_ofp_msg(Pid,M2).    
+    loom_ofdp:send_ofp_msg(Pid,M2).  
+
+test_tap() ->
+    D = list_to_pid("<0.91.0>"),
+    loom_ofdp_lib:clear(D),
+    tap_tcp_port(1, 2, 3, 53, D).
+
+    
+
