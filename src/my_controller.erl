@@ -2,7 +2,8 @@
 
 -compile([export_all]).
 -export([start/0,start/1,dp_link/3,dp_forward/3,match_forward/4,drop_loops/2,drop_loops1/2,
-         dp_link_and_tap/4,dp_link_and_tap2/4, dp_clear/1, send_of_requests/1, tap_tcp_port/5, test_tap/0]).
+         dp_link_and_tap/4,dp_link_and_tap2/4, dp_clear/1, send_of_requests/1,
+         test_tap/0, test_tap2/0, tap_all/0]).
 
 start()->
     loom_controller:start().
@@ -131,20 +132,43 @@ send_of_requests(Pid)->
 
 % Send packet to controller if tcp dst port = TcpPort
 % Also send packet to output port in any case.
-tap_tcp_port(Port1, Port2, Port3, TcpPort, Pid)->
-    M = loom_flow_lib:tap_forward(Port1, Port2, Port3, TcpPort),
+tap_port(Port1, Port2, Port3, TransportPort, Pid)->
+    M = loom_flow_lib:tap_forward(Port1, Port2, Port3, TransportPort),
     loom_ofdp:send_ofp_msg(Pid, M),
-    M0 = loom_flow_lib:tap_forward(Port2, Port1, Port3, TcpPort),
+    M0 = loom_flow_lib:tap_forward(Port2, Port1, Port3, TransportPort),
     loom_ofdp:send_ofp_msg(Pid, M0),
     M1 = loom_flow_lib:forward_mod(Port1,[Port2]),
     loom_ofdp:send_ofp_msg(Pid,M1),
     M2 = loom_flow_lib:forward_mod(Port2,[Port1]),
     loom_ofdp:send_ofp_msg(Pid,M2).  
 
+% copies traffic between 1 and 2 to 3
 test_tap() ->
     D = list_to_pid("<0.91.0>"),
     loom_ofdp_lib:clear(D),
-    tap_tcp_port(1, 2, 3, 53, D).
-
+    tap_port(1, 2, 3, 53, D).
     
-
+% copies  udp traffic from Port 1 to Port2 and Port 3
+% where srcIP is 10.0.2.60, 10.48.2.5 
+test_tap2() ->
+    D = list_to_pid("<0.91.0>"),
+    loom_ofdp_lib:clear(D),
+    IPv4Src1 = <<10:8,0:8,2:8,60:8>>,
+    IPv4Src2 = <<10:8,48:8,2:8,5:8>>,
+%    IPv4Src3 = <<10,48,33,190>>,
+%    tap_port2(2,1,3, IPv4Src1, D),
+%    tap_port2(2,1,3, IPv4Src2, D),
+    tap_port2(1,2,3, IPv4Src1, D),
+    tap_port2(1,2,3, IPv4Src2, D),      
+    loom_ofdp_lib:forward(D,2,[1]), 
+    loom_ofdp_lib:forward(D, 1,[2]).
+    
+% copies  DNS response traffic from Port 1 to Port2 and Port 3
+tap_port2(Port1, Port2, Port3, IPv4Src, Pid) ->    
+    M1 = loom_flow_lib:tap_dns_response(Port1, Port2, Port3, IPv4Src),
+    loom_ofdp:send_ofp_msg(Pid, M1).
+    
+tap_all() ->
+D = list_to_pid("<0.91.0>"),
+loom_ofdp_lib:forward(D,2,[1, 3]), 
+loom_ofdp_lib:forward(D, 1,[2, 3]).
