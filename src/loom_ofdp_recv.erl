@@ -98,7 +98,7 @@ recv(State) ->
     lager:info("Waiting for data on: ~p", [Socket]),
     receive
 	{tcp, Socket, Data} ->
-	    lager:info("Received TCP data from ~p: ~p", [Socket, Data]),
+	    lager:info("Received TCP data from ~p", [Socket]),
 	    {ok, NewParser, Messages} = ofp_parser:parse(Parser,Data),
             NewMessageCache = process_messages(Messages, MessageCache, Socket),
 	    inet:setopts(Socket,[{active, once}]),
@@ -233,9 +233,10 @@ process_packetin(action, _TableId, _Match, Data, #cache{packetin = {EthSrcList, 
         MessageCache#cache{packetin = {NEthSrcList, NEthDstList}}      
     catch
         E1:E2 ->
-            lager:error("Pkt decapsulate error: ~p:~p", [E1, E2]),
-            lager:error("Probably received malformed frame", []),
-            lager:error("With data: ~p", [Data])            
+%            lager:error("Pkt decapsulate error: ~p:~p", [E1, E2]),
+%            lager:error("Probably received malformed frame", []),
+%            lager:error("With data: ~p", [Data]),
+            MessageCache
     end;
 %% packetin on table miss - right now doing nothing, so only proactive
 process_packetin(nomatch, _TableId, _Match, _Data, MessageCache) ->

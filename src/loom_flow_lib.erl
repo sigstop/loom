@@ -9,18 +9,28 @@
          barrier_request/0,
          remove_all_flows_mod/0,forward_mod/2,forward_mod/4, get_flow_table_message/1,
 	 match_forward_mod/3, match_forward_mod/5, drop_loops_mod/2, drop_loops_mod1/2,
-	 config_packet_in/2, role_request/2, table_miss_flow_mod/1, tap_forward/4]).
+	 config_packet_in/2, role_request/2, table_miss_flow_mod/1, tap_forward/4, tap_dns_response/4]).
 
 -include("../include/loom.hrl").
 
-%tap packets to controller
-tap_forward(Port1, Port2, IPv4Dst, TCPDst) ->
-    Actions = actions_out_ports([Port2, controller]),
+%tap packets to controller for given port number and udp_dst
+tap_forward(Port1, Port2, Port3, DPort) ->
+    Actions = actions_out_ports([Port2, Port3]),
     Match = #ofp_match{fields = [#ofp_field{name = in_port, value = <<Port1:32>>},
-                                 #ofp_field{name = eth_type, value = <<8,0>>},
-                                 #ofp_field{name = ipv4_dst, value = IPv4Dst},
-                                 #ofp_field{name = ip_proto, value = <<6:8>>},
-                                 #ofp_field{name = tcp_dst, value = TCPDst}]},
+                                 #ofp_field{name = eth_type, value = <<16#800:16>>},
+                                 #ofp_field{name = ip_proto, value =  <<17:8>>},
+                                 #ofp_field{name = udp_dst, value = <<DPort:16>>}]},
+    Instruction = #ofp_instruction_apply_actions{actions = Actions},    
+    message(#ofp_flow_mod{table_id = 0, command = add, priority = 101,
+            match = Match, instructions = [Instruction]}).
+
+%tap packets to controller for udp traffic from DNS server IP address
+tap_dns_response(Port1, Port2, Port3, IPv4Src) ->
+    Actions = actions_out_ports([Port2, Port3]),
+    Match = #ofp_match{fields = [#ofp_field{name = in_port, value = <<Port1:32>>},
+                                 #ofp_field{name = eth_type, value = <<16#800:16>>},
+                                 #ofp_field{name = ip_proto, value =  <<17:8>>},
+                                 #ofp_field{name = ipv4_src, value = IPv4Src}]},
     Instruction = #ofp_instruction_apply_actions{actions = Actions},    
     message(#ofp_flow_mod{table_id = 0, command = add, priority = 101,
             match = Match, instructions = [Instruction]}).
