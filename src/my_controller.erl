@@ -158,8 +158,8 @@ test_tap2() ->
 %    IPv4Src3 = <<10,48,33,190>>,
 %    tap_port2(2,1,3, IPv4Src1, D),
 %    tap_port2(2,1,3, IPv4Src2, D),
-    tap_port2(1,2,3, IPv4Src1, D),
-    tap_port2(1,2,3, IPv4Src2, D),      
+    tap_port2(1,2,controller, IPv4Src1, D),
+    tap_port2(1,2,controller, IPv4Src2, D),      
     loom_ofdp_lib:forward(D,2,[1]), 
     loom_ofdp_lib:forward(D, 1,[2]).
     
