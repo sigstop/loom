@@ -7,6 +7,7 @@ start()->
     [code:add_pathz(Path) || Path <- filelib:wildcard("./apps/*/ebin")],
     error_logger:tty(false),
     application:start(crypto),
+    application:start(asn1),
     application:start(public_key),
     application:start(ssh),
     application:start(xmerl),
