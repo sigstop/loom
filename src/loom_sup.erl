@@ -11,7 +11,7 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/0,get_pid/0,get_children/0,start_controller/2]).
+-export([start_link/0,launch_controller/2,get_pid/0,get_children/0,start_controller/2]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -28,6 +28,13 @@ start_link() ->
     Config = [{controller, default, Port}],
     [start_controller(Pid,Controller) || Controller <- Config],
     {ok,Pid}.
+
+-spec start_controller( atom(), integer() ) -> ok| ignore | {error, term()}.
+launch_controller(Name,Port) ->
+    Pid = whereis(loom_sup),
+    Config = [{controller, Name, Port}],
+    [start_controller(Pid,Controller) || Controller <- Config],
+    ok.
 
 get_pid()->
     whereis(loom_sup).

@@ -12,7 +12,7 @@
 
 -include("../include/loom.hrl").
 
--record(state, {id, pid, port, sup}).
+-record(state, {id, pid, port, sup, subscribers}).
 
 -export([start_link/2,broken_call/0,get_id/1,start/2]).
 
@@ -28,7 +28,7 @@ start(Name,Port)->
     loom_sup:start_controller(Sup,Config).
 
 start_link(ID,Port)->
-    gen_server:start_link(?MODULE, [#state{id=ID,port=Port}], []).
+    gen_server:start_link(?MODULE, [#state{id=ID,port=Port,subscribers=[]}], []).
 
 init([State])->
     Pid = self(),
@@ -50,6 +50,13 @@ handle_call(get_id, _From, State) ->
 handle_call({message, Message},_From,State)->
     io:format("GOT MESSAGE: ~p~n",[Message]),
     {noreply, State};
+
+handle_call({subscribe, packet_in_dns_reply}, From, State)->
+    Subscribers = State#state.subscribers,
+    NewSubscribers = [{packet_in_dns_reply,From}|Subscribers],
+    NewState = State#state{subscribers = NewSubscribers},
+    Reply = ok,
+    {reply, Reply, NewState};
 
 handle_call(Request, _From, State) ->
     io:format("GOT UNKNOWN CALL REQUEST: ~p~n",[Request]),

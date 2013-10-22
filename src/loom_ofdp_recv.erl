@@ -12,7 +12,7 @@
 
 -include("../include/loom.hrl").
 
--record(state, {pid, console, parent, listener, sender, socket, address, port, sup, parser, message_cache}).
+-record(state, {pid, console, parent, listener, sender, socket, address, port, sup, parser, message_cache, subscribers}).
                 
 -record(cache, {features_reply, echo_reply, get_config_reply, desc_reply, flow_stats_reply,
                 aggregate_stats_reply, table_stats_reply, port_stats_reply, queue_stats_reply,
@@ -56,21 +56,30 @@ get_eth_dst_list(Pid)->
 init([State])->
     Pid = self(),
     {ok, Parser} = ofp_parser:new(4),
-    NewState = State#state{ pid = Pid, parser = Parser, message_cache=#cache{packetin = {[],[]}}},
+    NewState = State#state{ pid = Pid, parser = Parser, message_cache=#cache{packetin = {[],[]}},
+			  subscribers = []},
     gen_server:cast(self(),recv),
     io:format("in ofdp_recv init Pid = ~p~n", [self()]),    
     {ok,NewState}.
 
+handle_call({subscribe, {Pid, packet_in_dns_reply}},_From, State)->
+    Subscribers = State#state.subscribers,
+    NewSubscribers = [{packet_in_dns_reply,Pid}|Subscribers],
+    NewState = State#state{subscribers = NewSubscribers},
+    Reply = ok,
+    {reply, Reply, NewState};
 handle_call(Request, _From, State) ->
     io:format("GOT UNKNOWN CALL REQUEST: ~p~n",[Request]),
     Reply = ok,
     {reply, Reply, State}.
+
 
 handle_cast(recv,State)->
     Listener = State#state.listener,
     Listener ! {new_ofdp_recv,self()},
     recv(State),
     {noreply, State};
+
 
 handle_cast(Msg, State) ->
     io:format("GOT UNKNOWN CAST REQUEST: ~p",[Msg]),
