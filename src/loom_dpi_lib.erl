@@ -24,7 +24,7 @@ dns_reply(Pids,Data)->
 		lager:info("Network Packet of type ~p/~p~n",[Type1,Type2]),
 		Result = case (Type1 == ipv4) and (Type2 == udp) of
 			     true ->  IPHeader = pkt:ipv4(Header1),
-				      UPDHeader = pkt:upd(Header2),
+				      UPDHeader = pkt:udp(Header2),
 				      IPSource = IPHeader#ipv4.saddr,
 				      IPDest = IPHeader#ipv4.daddr,
 				      lager:info("UDP Packet from ~p to ~p~n",[IPSource,IPDest]),
