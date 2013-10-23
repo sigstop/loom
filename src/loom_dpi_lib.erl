@@ -18,21 +18,20 @@ dns_reply(Pids,Data)->
 	Packet = pkt:decapsulate({ether,Data}),
 	case Packet of 
 	    [EthHeader,Header1,Header2,Payload] ->
+		lager:info("Header1: ~p~n",[Header1]),
+		lager:info("Header2: ~p~n",[Header2]),
 		[ether|_] = tuple_to_list(EthHeader),
 		[Type1|_] = tuple_to_list(Header1),
 		[Type2|_] = tuple_to_list(Header2),
 		lager:info("Network Packet of type ~p/~p~n",[Type1,Type2]),
 		Result = case (Type1 == ipv4) and (Type2 == udp) of
-			     true ->  IPHeader = pkt:ipv4(Header1),
-				      UDPHeader = pkt:udp(Header2),
-				      lager:info("IP Header: ~p~n",[IPHeader]),
-				      lager:info("UDP Header: ~p~n",[UDPHeader]),
+			     true ->  
 				      lager:info("Attempting inet_dns:decode(..) on ~p~n",[Payload]),
 				      inet_dns:decode(Payload);
 			     _ -> unknown
 			 end,
 		case Result of
-		    {ok,DnsRec} -> lager:info("DNS Packet from ~p to ~p: ~p~n",[Header1#ipv4.saddr,Header1#ipv4.daddr,DnsRec]),
+		    {ok,DnsRec} -> lager:info("DNS Packet: ~p~n",[DnsRec]),
 				   [ Pid ! {dns_reply,DnsRec} || Pid <- Pids ];
 		    
 		    _ -> lager:info("No match dropped: ~p~n",[Result])
