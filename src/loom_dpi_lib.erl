@@ -42,7 +42,7 @@ dns_reply(Pids,Data)->
 					 {R,ID}
 				 end,
 			lager:info("Return Value: ~p~n",[Return]),
-			[ Pid ! {dns_reply,DnsRec} || Pid <- Pids ];
+			[ Pid ! {dns_reply,Return} || Pid <- Pids ];
 		    
 		    _ -> lager:info("No match dropped: ~p~n",[Result])
 		end;
