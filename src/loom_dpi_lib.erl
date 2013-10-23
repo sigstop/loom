@@ -22,7 +22,7 @@ dns_reply(Pids,Data)->
 		[Type1|_] = tuple_to_list(Header1),
 		[Type2|_] = tuple_to_list(Header2),
 		lager:info("Network Packet of type ~p/~p~n",[Type1,Type2]),
-		Result = case (Type1) == ipv4 and (Type2 == udp) of
+		Result = case (Type1 == ipv4) and (Type2 == udp) of
 			     udp -> inet_dns:decode(Payload);
 			     _ -> unknown
 			 end,
