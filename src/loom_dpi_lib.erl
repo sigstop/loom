@@ -17,19 +17,11 @@ dns_reply(Pids,Data)->
 	Packet = pkt:decapsulate({ether,Data}),
 	case Packet of 
 	    [EthHeader,Header1,Header2,Payload] ->
-		EthSrc = EthHeader#ether.shost,
-		EthDst = EthHeader#ether.dhost,
-		EthType = EthHeader#ether.type,
-		lager:info("Ether Packet: EthSrc = ~18s, EthDSt = ~18s ~n",
-			   [loom_util:binary_to_hex(EthSrc), loom_util:binary_to_hex(EthDst)]),
-		lager:info("Ether Packet of type",[EthType]),
-		ProtoType = case EthType of
-				ipv4 ->
-				    Header1#ipv4.p;
-				_ -> unknown
-			    end,
-		lager:info("Network Packet of type ~p~n",[ProtoType]),
-		Result = case ProtoType of
+		[ether,_] = tuple_to_list(EthHeader),
+		[Type1,_] = tuple_to_list(Header1),
+		[Type2,_] = tuple_to_list(Header2),
+		lager:info("Network Packet of type ~p/~p~n",[Type1,Type2]),
+		Result = case (Type1) == ipv4 and (Type2 == udp) of
 			     udp -> inet_dns:decode(Payload);
 			     _ -> unknown
 			 end,
@@ -37,7 +29,7 @@ dns_reply(Pids,Data)->
 		    {ok,DnsRec} -> lager:info("DNS Packet from ~p to ~p: ~p~n",[Header1#ipv4.saddr,Header1#ipv4.daddr,DnsRec]),
 				   [ Pid ! {dns_reply,DnsRec} || Pid <- Pids ];
 		    
-		    _ -> ok
+		    _ -> lager:info("No match dropped: ~p~n",[Packet])
 		end;
 	    _ -> 
 		lager:info("No match dropped: ~p~n",[Packet])
