@@ -13,13 +13,14 @@
 -compile([export_all]).
 
 dns_reply(Pids,Data)->
+    lager:info("Inspecting packet: ~p~n",[Data]),
     try
 	Packet = pkt:decapsulate({ether,Data}),
 	case Packet of 
 	    [EthHeader,Header1,Header2,Payload] ->
-		[ether,_] = tuple_to_list(EthHeader),
-		[Type1,_] = tuple_to_list(Header1),
-		[Type2,_] = tuple_to_list(Header2),
+		[ether|_] = tuple_to_list(EthHeader),
+		[Type1|_] = tuple_to_list(Header1),
+		[Type2|_] = tuple_to_list(Header2),
 		lager:info("Network Packet of type ~p/~p~n",[Type1,Type2]),
 		Result = case (Type1) == ipv4 and (Type2 == udp) of
 			     udp -> inet_dns:decode(Payload);
