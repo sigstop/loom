@@ -32,6 +32,13 @@ dns_reply(Pids,Data)->
 			 end,
 		case Result of
 		    {ok,DnsRec} -> lager:info("DNS Packet: ~p~n",[DnsRec]),
+				   Match = match_reply(DnsRec),
+				   lager:info("Match Value: ~p~n",[Match]),
+				   Return = case Match of
+						{error,_} -> error;
+						ID -> {Header1#ipv4.daddr,ID}
+					    end,
+				   lager:info("Return Value: ~p~n",[Return]),
 				   [ Pid ! {dns_reply,DnsRec} || Pid <- Pids ];
 		    
 		    _ -> lager:info("No match dropped: ~p~n",[Result])
@@ -43,3 +50,15 @@ dns_reply(Pids,Data)->
 	Error ->
 	    lager:info("Decapsulation Error:~p Data: ~p~n",[Error,Data])
     end.
+
+
+
+match_reply({dns_rec,{dns_header,_,true,_,_,_,_,_,_,_},[{dns_query,_,a,in}],RRSet,_,_} )->
+    Record = lists:keyfind(a,3,RRSet),
+    case Record of
+	false ->
+	    {error,no_a_record};
+	{_,_,_,_,_,ID,_,_,_} -> ID
+    end;
+match_reply(_) ->
+    {error,bad_response}.
