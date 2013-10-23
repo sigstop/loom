@@ -58,7 +58,7 @@ match_reply({dns_rec,{dns_header,_,true,_,_,_,_,_,_,_},[{dns_query,_,a,in}],RRSe
     case Record of
 	false ->
 	    {error,no_a_record};
-	{_,_,_,_,_,ID,_,_,_} -> ID
+	{dns_rr,_,a,_,_,_,ID,_,_,_} -> ID
     end;
 match_reply(_) ->
     {error,bad_response}.
