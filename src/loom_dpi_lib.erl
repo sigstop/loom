@@ -23,14 +23,20 @@ dns_reply(Pids,Data)->
 		[Type2|_] = tuple_to_list(Header2),
 		lager:info("Network Packet of type ~p/~p~n",[Type1,Type2]),
 		Result = case (Type1 == ipv4) and (Type2 == udp) of
-			     udp -> inet_dns:decode(Payload);
+			     true ->  IPHeader = pkt:ipv4(Header1),
+				      UPDHeader = pkt:upd(Header2),
+				      IPSource = IPHeader#ipv4.saddr,
+				      IPDest = IPHeader#ipv4.daddr,
+				      lager:info("UDP Packet from ~p to ~p~n",[IPSource,IPDest]),
+				      lager:info("Attempting inet_dns:decode(..) on ~p~n",[Payload]),
+				      inet_dns:decode(Payload);
 			     _ -> unknown
 			 end,
 		case Result of
 		    {ok,DnsRec} -> lager:info("DNS Packet from ~p to ~p: ~p~n",[Header1#ipv4.saddr,Header1#ipv4.daddr,DnsRec]),
 				   [ Pid ! {dns_reply,DnsRec} || Pid <- Pids ];
 		    
-		    _ -> lager:info("No match dropped: ~p~n",[Packet])
+		    _ -> lager:info("No match dropped: ~p~n",[Result])
 		end;
 	    _ -> 
 		lager:info("No match dropped: ~p~n",[Packet])
