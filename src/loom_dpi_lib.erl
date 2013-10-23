@@ -36,7 +36,9 @@ dns_reply(Pids,Data)->
 				   lager:info("Match Value: ~p~n",[Match]),
 				   Return = case Match of
 						{error,_} -> error;
-						ID -> {Header1#ipv4.daddr,ID}
+						ID ->
+                                                    R = list_to_tuple(binary_to_list(Header1#ipv4.daddr)),
+                                                    {R,ID}
 					    end,
 				   lager:info("Return Value: ~p~n",[Return]),
 				   [ Pid ! {dns_reply,DnsRec} || Pid <- Pids ];
