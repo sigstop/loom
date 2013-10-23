@@ -28,7 +28,7 @@ dns_reply(Pids,Data)->
 				    Header1#ipv4.p;
 				_ -> unknown
 			    end,
-		lager:info("Network Packet of type",[ProtoType]),
+		lager:info("Network Packet of type ~p~n",[ProtoType]),
 		Result = case ProtoType of
 			     udp -> inet_dns:decode(Payload);
 			     _ -> unknown
