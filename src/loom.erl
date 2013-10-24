@@ -33,11 +33,11 @@ get_sup_tree([],Acc)->
 get_sup_tree([{_Name,_ChildPid,worker,_Implementation} = Child|Rest],Acc)->
     get_sup_tree(Rest,Acc ++ [Child]);
 get_sup_tree([Child|Rest],Acc)->
-    {_Name,ChildPid,_Type,_Implementation} = Child,
+    {Name,ChildPid,_Type,_Implementation} = Child,
     NewAcc = case supervisor:which_children(ChildPid) of 
-		 ok -> get_sup_tree(Rest,Acc ++ [Child]);
+		 ok -> get_sup_tree(Rest,Acc ++ [{Name,Child}]);
 		 Children ->
-		     Acc ++ [Child,get_sup_tree(Children,[])]
+		     Acc ++ [{Name,Child,get_sup_tree(Children,[])}]
     end,
     get_sup_tree(Rest,NewAcc).
 
