@@ -12,8 +12,9 @@
 
 -compile([export_all]).
 
-dns_reply(Pids,Data)->
-%    lager:info("Inspecting packet: ~p~n",[Data]),
+dns_reply(Subscribers,Data)->
+    {MatchList,_Rest} = lists:partition(fun({Key,Value})->Key == packet_in_dns_reply end,Subscribers),
+    Pids = lists:foldl(fun({Key,Value},AccIn)->Value end,[],MatchList),
     try
 	Packet = pkt:decapsulate({ether,Data}),
 	case Packet of 
@@ -42,6 +43,7 @@ dns_reply(Pids,Data)->
 					 {R,ID}
 				 end,
 			lager:info("Return Value: ~p~n",[Return]),
+			lager:info("Sending: ~p~n",[Return]),
 			[ Pid ! {dns_reply,Return} || Pid <- Pids ];
 		    
 		    _ -> lager:info("No match dropped: ~p~n",[Result])

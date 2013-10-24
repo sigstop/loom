@@ -226,8 +226,8 @@ process_message(Message, MessageCache, Socket,_Subscribers) ->
 %EthDstList is a list of tuples of {EthDst, Count}
 % Max len of list is 100
 process_packetin(action, _TableId, _Match, Data, #cache{packetin = {EthSrcList, EthDstList}} = MessageCache,Subscribers) ->
-    {MatchList,_Rest} = lists:partition(fun({Key,Value})->Key == packet_in_dns_reply end,Subscribers),
-    loom_dpi_lib:dns_reply(MatchList,Data),
+   
+    loom_dpi_lib:dns_reply(Subscribers,Data),
     MessageCache;     
 process_packetin(nomatch, _TableId, _Match, _Data, MessageCache,_Subscribers) ->
     lager:info("packetin reason = nomatch~n"),
