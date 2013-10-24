@@ -128,6 +128,10 @@ recv(State) ->
             {_, EthDstList} = Cache#cache.packetin,
             print_eth_list(EthDstList),
             recv(State);
+	{subscribe, {Pid, packet_in_dns_reply} ->
+	    NewSubscribers = [{packet_in_dns_reply,Pid}|Subscribers],
+	    NewState = State#state{subscribers = NewSubscribers},
+	    recv(NewState);
 	{set_console, ConsolePid} ->
 	    recv(State#state{console = ConsolePid})
     end.		    
