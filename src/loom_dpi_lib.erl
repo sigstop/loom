@@ -14,7 +14,7 @@
 
 dns_reply(Subscribers,Data)->
     {MatchList,_Rest} = lists:partition(fun({Key,Value})->Key == packet_in_dns_reply end,Subscribers),
-    Pids = lists:foldl(fun({Key,Value},AccIn)->Value end,[],MatchList),
+    Pids = lists:foldl(fun({Key,Value},AccIn)->[Value|AccIn] end,[],MatchList),
     try
 	Packet = pkt:decapsulate({ether,Data}),
 	case Packet of 
