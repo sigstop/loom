@@ -17,7 +17,7 @@
 -record(state, {pid, parent, listener, socket, address, port, sup, parser}).
 
 %% API
--export([start_link/3,create/3,get_pid/1,send/2,send_ofp_msg/2,socket_closed/2]).
+-export([start_link/3,create/3,get_pid/1,send/2,send_ofp_msg/2,socket_closed/2,get_all/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -51,6 +51,38 @@ socket_closed(Pid,Socket)->
 
 get_pid(Name) when is_tuple(Name)->
     global:whereis_name(Name).
+
+get_all(ID)->
+    LoomSupTree = loom:get_sup_tree(),
+    get_ofdp_list(ID,LoomSupTree).
+
+get_ofdp_list(ID,LoomSupTree)->
+    Loom = lists:keyfind(ID,1,LoomSupTree),
+    IDChildren = case Loom of
+		      false ->
+			  not_running;
+		      {ID,_,Children} -> Children
+		  end,
+    OFDPL = case IDChildren of
+		not_running ->
+		    false;
+		[] -> false;
+		_ -> {OFDP,_Rest} = lists:partition(fun(X)->
+							   [Name | _Rest] = tuple_to_list(X),
+							   Name == loom_ofdp_sup end,IDChildren),
+		     OFDP
+	    end,
+    Workers = case OFDPL of
+		  [] -> false;
+		  [{_,_,W}] -> W;
+		  _ -> false
+	      end,
+    lists:foldl(fun(X,AccIn)->case X of
+				  {_,Pid,worker,[loom_ofdp]} ->
+				      [Pid|AccIn];
+				  _ -> AccIn
+			      end
+		end,[],Workers).
 
 %% ===================================================================
 %% gen_server callbacks

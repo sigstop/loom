@@ -19,7 +19,7 @@
                 group_stats_reply, group_desc_reply, group_features_reply, meter_features_reply,
                 meter_config_reply, table_features_reply, port_desc_reply, get_async_reply, packetin::{[], []}}).
 %% API
--export([start_link/4,create/4,send/2,set_console/2, get_eth_src_list/1, get_eth_dst_list/1]).
+-export([start_link/4,create/4,send/2,set_console/2, get_eth_src_list/1, get_eth_dst_list/1, get_all/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -47,6 +47,38 @@ get_eth_src_list(Pid)->
 
 get_eth_dst_list(Pid)->
     Pid ! {get_eth_dst_list}.
+
+get_all(ID)->
+    LoomSupTree = loom:get_sup_tree(),
+    get_ofdp_recv_list(ID,LoomSupTree).
+
+get_ofdp_recv_list(ID,LoomSupTree)->
+    Loom = lists:keyfind(ID,1,LoomSupTree),
+    IDChildren = case Loom of
+		      false ->
+			  not_running;
+		      {ID,_,Children} -> Children
+		  end,
+    OFDPL = case IDChildren of
+		not_running ->
+		    false;
+		[] -> false;
+		_ -> {OFDP,Rest} = lists:partition(fun(X)->
+							   [Name | Rest] = tuple_to_list(X),
+							   Name == loom_ofdp_recv_sup end,IDChildren),
+		     OFDP
+	    end,
+    Workers = case OFDPL of
+		  [] -> false;
+		  [{_,_,W}] -> W;
+		  _ -> false
+	      end,
+    lists:foldl(fun(X,AccIn)->case X of
+				  {_,Pid,worker,[loom_ofdp_recv]} ->
+				      [Pid|AccIn];
+				  _ -> AccIn
+			      end
+		end,[],Workers).
     
 %% ===================================================================
 %% gen_server callbacks
