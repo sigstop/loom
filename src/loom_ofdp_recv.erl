@@ -63,8 +63,8 @@ get_ofdp_recv_list(ID,LoomSupTree)->
 		not_running ->
 		    false;
 		[] -> false;
-		_ -> {OFDP,Rest} = lists:partition(fun(X)->
-							   [Name | Rest] = tuple_to_list(X),
+		_ -> {OFDP,_Rest} = lists:partition(fun(X)->
+							   [Name | _Rest] = tuple_to_list(X),
 							   Name == loom_ofdp_recv_sup end,IDChildren),
 		     OFDP
 	    end,
