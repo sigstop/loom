@@ -17,7 +17,7 @@
 -record(state, {pid, parent, listener, socket, address, port, sup, parser}).
 
 %% API
--export([start_link/3,create/3,get_pid/1,send/2,send_ofp_msg/2,socket_closed/2,get_all/1]).
+-export([start_link/3,create/3,get_pid/1,send/2,send_ofp_msg/2,socket_closed/2,get_all/1,get_address/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -84,6 +84,9 @@ get_ofdp_list(ID,LoomSupTree)->
 			      end
 		end,[],Workers).
 
+get_address(Pid)->
+    gen_server:call(Pid,get_address).
+
 %% ===================================================================
 %% gen_server callbacks
 %% ===================================================================
@@ -102,6 +105,11 @@ init([State])->
     NewState = State#state{ pid = Pid, address = Address, port = Port, parser = Parser },
     {ok,NewState}.
 
+handle_call(get_address, _From, State) ->
+    Socket = State#state.socket,
+    {ok, Address} = inet:peername(Socket),
+    Reply = Address,
+    {reply, Reply, State};
 handle_call(Request, _From, State) ->
     io:format("GOT UNKNOWN CALL REQUEST: ~p~n",[Request]),
     Reply = ok,
