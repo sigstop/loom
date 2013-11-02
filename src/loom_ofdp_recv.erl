@@ -103,7 +103,7 @@ init([State])->
     NewState = State#state{ pid = Pid, parser = Parser, message_cache=#cache{packetin = {[],[]}},
 			  subscribers = []},
     gen_server:cast(self(),recv),
-    io:format("in ofdp_recv init Pid = ~p~n", [self()]),    
+    lager:info("in ofdp_recv init Pid = ~p~n", [self()]),    
     {ok,NewState}.
 
 handle_call({subscribe, {Pid, packet_in_dns_reply}},_From, State)->
@@ -113,7 +113,7 @@ handle_call({subscribe, {Pid, packet_in_dns_reply}},_From, State)->
     Reply = ok,
     {reply, Reply, NewState};
 handle_call(Request, _From, State) ->
-    io:format("GOT UNKNOWN CALL REQUEST: ~p~n",[Request]),
+    lager:info("GOT UNKNOWN CALL REQUEST: ~p~n",[Request]),
     Reply = ok,
     {reply, Reply, State}.
 
@@ -126,12 +126,12 @@ handle_cast(recv,State)->
 
 
 handle_cast(Msg, State) ->
-    io:format("GOT UNKNOWN CAST REQUEST: ~p",[Msg]),
+    lager:info("GOT UNKNOWN CAST REQUEST: ~p",[Msg]),
     {noreply, State}.
 
 
 handle_info(Info, State) ->
-    io:format("GOT UNKNOWN INFO REQUEST: ~p~n",[Info]),
+    lager:info("GOT UNKNOWN INFO REQUEST: ~p~n",[Info]),
     {noreply, State}.
 
 terminate(_Reason, _State) ->
