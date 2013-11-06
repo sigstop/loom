@@ -152,7 +152,7 @@ recv(State) ->
     lager:info("Waiting for data on: ~p", [Socket]),
     receive
 	{tcp, Socket, Data} ->
-	    lager:info("Received TCP data from ~p", [Socket]),
+%	    lager:info("Received TCP data from ~p", [Socket]),
 	    {ok, NewParser, Messages} = ofp_parser:parse(Parser,Data),
             NewMessageCache = process_messages(Messages, MessageCache, Socket, Subscribers, Data),
 	    inet:setopts(Socket,[{active, once}]),
@@ -267,8 +267,8 @@ process_message(#ofp_message{body = #ofp_packet_in
 %   lager:info("Received packet_in from ~p:  TableId = ~p, Match = ~p, Reason = ~p Cookie =~p~n",
 %        [Socket, TableId, Match, Reason, Cookie]),
     process_packetin(Reason, TableId, Match, Data, MessageCache, Subscribers);
-process_message(Message, MessageCache, Socket,_Subscribers, Raw) ->
-    lager:info("Why this? ..Received Data from ~p: ~p ~n", [Socket, Raw]),
+process_message(_Message, MessageCache, Socket,_Subscribers, Raw) ->
+    lager:info("Unknown message* ..Received Raw Data from ~p: ~p ~n", [Socket, Raw]),
     MessageCache.    
 
 %packetin on action 
