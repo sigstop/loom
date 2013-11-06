@@ -26,7 +26,7 @@
 
 -record(state, {pid, console, parent, listener, sender, socket, address, port, sup, parser, message_cache, subscribers}).
                 
--record(cache, {features_reply, echo_reply, get_config_reply, desc_reply, flow_stats_reply,
+-record(cache, {hello, features_reply, echo_reply, get_config_reply, desc_reply, flow_stats_reply,
                 aggregate_stats_reply, table_stats_reply, port_stats_reply, queue_stats_reply,
                 group_stats_reply, group_desc_reply, group_features_reply, meter_features_reply,
                 meter_config_reply, table_features_reply, port_desc_reply, get_async_reply, packetin::{[], []}}).

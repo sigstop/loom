@@ -23,7 +23,7 @@
 -compile([export_all]).
 -export([start/0,start/1,dp_link/3,dp_forward/3,match_forward/4,drop_loops/2,drop_loops1/2,
          dp_link_and_tap/4,dp_link_and_tap2/4, dp_clear/1, send_of_requests/1,
-         test_tap/0, test_tap2/0, tap_all/0]).
+         test_tap/0, test_tap2/0, tap_all/0, test_link12/0, test_link/3, test_clear/0, test_echo/1]).
 
 start()->
     loom_controller:start().
@@ -171,7 +171,7 @@ test_tap() ->
 % copies  udp traffic from Port 1 to Port2 and Port 3
 % where srcIP is 10.0.2.60, 10.48.2.5 
 test_tap2() ->
-    D = list_to_pid("<0.91.0>"),
+    [D|_] = loom_ofdp:get_all(default),
     loom_ofdp_lib:clear(D),
     IPv4Src1 = <<10:8,0:8,2:8,60:8>>,
     IPv4Src2 = <<10:8,48:8,2:8,5:8>>,
@@ -189,6 +189,24 @@ tap_port2(Port1, Port2, Port3, IPv4Src, Pid) ->
     loom_ofdp:send_ofp_msg(Pid, M1).
     
 tap_all() ->
-D = list_to_pid("<0.91.0>"),
-loom_ofdp_lib:forward(D,2,[1, 3]), 
-loom_ofdp_lib:forward(D, 1,[2, 3]).
+    [D|_] = loom_ofdp:get_all(default),
+    loom_ofdp_lib:forward(D,2,[1, 3]), 
+    loom_ofdp_lib:forward(D, 1,[2, 3]).
+
+% copies all traffic from Port 1 to Port 2 and vice versa
+test_link12() ->
+    test_link(1, 2, []).
+test_link(Port1, Port2, Ports)->
+    [D|_] = loom_ofdp:get_all(default),
+    dp_forward(D, Port1, [Port2|Ports]),
+    dp_forward(D, Port2, [Port1|Ports]).
+    
+test_clear() ->
+    [D|_] = loom_ofdp:get_all(default),
+    dp_clear(D).
+
+% usage my_controller:test_echo(<<"test">>).
+test_echo(Data)->
+    [D|_] = loom_ofdp:get_all(default),
+    M = loom_flow_lib:echo_request(Data),
+    loom_ofdp:send_ofp_msg(D, M).    
