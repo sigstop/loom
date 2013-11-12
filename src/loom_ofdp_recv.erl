@@ -26,12 +26,12 @@
 
 -record(state, {pid, console, parent, listener, sender, socket, address, port, sup, parser, message_cache, subscribers}).
                 
--record(cache, {features_reply, echo_reply, get_config_reply, desc_reply, flow_stats_reply,
+-record(cache, {hello, features_reply, echo_reply, get_config_reply, desc_reply, flow_stats_reply,
                 aggregate_stats_reply, table_stats_reply, port_stats_reply, queue_stats_reply,
                 group_stats_reply, group_desc_reply, group_features_reply, meter_features_reply,
                 meter_config_reply, table_features_reply, port_desc_reply, get_async_reply, packetin::{[], []}}).
 %% API
--export([start_link/4,create/4,send/2,set_console/2, get_eth_src_list/1, get_eth_dst_list/1, get_all/1]).
+-export([start_link/4,create/4,send/2,set_console/2, get_all/1, get_response/3]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -54,11 +54,8 @@ send(Pid,Msg)->
 set_console(Pid,ConsolePid)->
     Pid ! {set_console,ConsolePid}.
     
-get_eth_src_list(Pid)->
-    Pid ! {get_eth_src_list}.
-
-get_eth_dst_list(Pid)->
-    Pid ! {get_eth_dst_list}.
+get_response(Pid, Type, ToPid)->
+    Pid ! {get_response, {Type, ToPid}}.
 
 get_all(ID)->
     LoomSupTree = loom:get_sup_tree(),
@@ -152,7 +149,7 @@ recv(State) ->
     lager:info("Waiting for data on: ~p", [Socket]),
     receive
 	{tcp, Socket, Data} ->
-	    lager:info("Received TCP data from ~p", [Socket]),
+%	    lager:info("Received TCP data from ~p", [Socket]),
 	    {ok, NewParser, Messages} = ofp_parser:parse(Parser,Data),
             NewMessageCache = process_messages(Messages, MessageCache, Socket, Subscribers, Data),
 	    inet:setopts(Socket,[{active, once}]),
@@ -162,15 +159,10 @@ recv(State) ->
             lager:info("Socket ~p closed", [Socket]),
 	    loom_ofdp:socket_closed(Sender,Socket),
 	    exit(socket_closed);
-        {get_eth_src_list} ->
+        {get_response, {Type, ToPid}} ->
             Cache = State#state.message_cache,
-            {EthSrcList, _} = Cache#cache.packetin,
-            print_eth_list(EthSrcList),
-            recv(State);
-        {get_eth_dst_list} ->
-            Cache = State#state.message_cache,
-            {_, EthDstList} = Cache#cache.packetin,
-            print_eth_list(EthDstList),
+            Reply = get_cached_message(Type, Cache),
+            ToPid ! {reply, Reply},
             recv(State);
 	{subscribe, {Pid, packet_in_dns_reply}} ->
 	    NewSubscribers = [{packet_in_dns_reply,Pid}|Subscribers],
@@ -188,6 +180,12 @@ process_messages(Messages, MessageCache, Socket, Subscribers, Data) ->
     NewMessageCache = process_message(Message, MessageCache, Socket,Subscribers, Data),
     process_messages(Rest, NewMessageCache, Socket,Subscribers, Data).
 
+process_message(#ofp_message{body = #ofp_echo_reply{data = Data}} = Message, MessageCache, Socket, _Subscribers, _Raw) ->
+    lager:info("Received ofp_echo_reply from ~p: Data = ~p  ~n",[Socket, Data]),
+    MessageCache#cache{echo_reply = Message};
+process_message(#ofp_message{body = #ofp_hello{elements = Elements}} = Message, MessageCache, Socket, _Subscribers, _Raw) ->
+    lager:info("Received ofp_hello from ~p: Elements = ~p  ~n",[Socket, Elements]),
+    MessageCache#cache{hello = Message};
 process_message(#ofp_message{body = #ofp_features_reply
             {datapath_mac= DatapathMac, datapath_id = DatapathId}} =Message, MessageCache, Socket, _Subscribers, _Raw) ->
     lager:info("Received ofp_features_reply from ~p:  DatapathMac = ~p, Datapath_id = ~p ~n",
@@ -207,8 +205,7 @@ process_message(#ofp_message{body = #ofp_desc_reply
     MessageCache#cache{desc_reply = Message};   
 process_message(#ofp_message{body = #ofp_flow_stats_reply{flags = Flags, body = Stats}} = Message,
         MessageCache, Socket, _Subscribers, _Raw) ->
-    my_controller:stats_response(Stats),
-%    lager:info("Received flow_stats_reply from ~p:  Flags = ~p Stats = ~p~n", [Socket, Flags, Stats]),
+   lager:info("Received flow_stats_reply from ~p: Flags = ~p, Stats = ~p~n", [Socket, Flags, Stats]),
     MessageCache#cache{flow_stats_reply = Message};
 process_message(#ofp_message{body = #ofp_aggregate_stats_reply{flags = Flags, packet_count = PacketCount,
         byte_count = ByteCount, flow_count = FlowCount}} = Message, MessageCache, Socket, _Subscribers, _Raw) ->
@@ -259,18 +256,13 @@ process_message(#ofp_message{body = #ofp_get_async_reply
     MessageCache#cache{get_async_reply = Message};
 process_message(#ofp_message{body = #ofp_packet_in
 	{table_id = TableId, match = Match, reason = Reason, data = Data}}, MessageCache, _Socket,Subscribers, _Raw) ->
-%   lager:info("Received packet_in from ~p:  TableId = ~p, Match = ~p, Reason = ~p Cookie =~p~n",
-%        [Socket, TableId, Match, Reason, Cookie]),
     process_packetin(Reason, TableId, Match, Data, MessageCache, Subscribers);
-process_message(Message, MessageCache, Socket,_Subscribers, Raw) ->
-    lager:info("Why this? ..Received Data from ~p: ~p ~n", [Socket, Raw]),
+process_message(_Message, MessageCache, Socket,_Subscribers, Raw) ->
+    lager:info("Unknown message* ..Received Raw Data from ~p: ~p ~n", [Socket, Raw]),
     MessageCache.    
 
-%packetin on action 
-%EthSrcList is a list of tuples of {EthSrc, Count}
-%EthDstList is a list of tuples of {EthDst, Count}
-% Max len of list is 100
-process_packetin(action, _TableId, _Match, Data, #cache{packetin = {EthSrcList, EthDstList}} = MessageCache,Subscribers) ->
+%packetin
+process_packetin(action, _TableId, _Match, Data, MessageCache,Subscribers) ->
    
     loom_dpi_lib:dns_reply(Subscribers,Data),
     MessageCache;     
@@ -280,13 +272,15 @@ process_packetin(nomatch, _TableId, _Match, _Data, MessageCache,_Subscribers) ->
 process_packetin(Reason, _TableId, _Match, _Data, MessageCache,_Subscribers) ->
     lager:info("packetin reason = ~p~n", [Reason]),
     MessageCache.
-    
 
+%% get cached responses 
+get_cached_message(Type, Cache) ->
+    case Type of
+        flow_stats_reply ->
+            Reply = Cache#cache.flow_stats_reply,
+            lager:info("Reply = ~p~n", [Reply]);
+        _ -> Reply = ok
+    end,
+    lager:info("Reply = ~p~n", [Reply]),    
+    Reply.
 
-% List consists of tuples {EthAdrs, Count}
-print_eth_list([]) ->
-    ok;
-print_eth_list([{Eth, Count}|Rest]) ->
-    lager:info("Eth = ~18s, Count = ~p~n", [loom_util:binary_to_hex(Eth), Count]),
-    print_eth_list(Rest).
-    

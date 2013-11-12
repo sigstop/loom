@@ -24,7 +24,7 @@
 -export([start/0,start/1,dp_link/3,dp_forward/3,match_forward/4,drop_loops/2,drop_loops1/2,
          dp_link_and_tap/4,dp_link_and_tap2/4, dp_clear/1, send_of_requests/1,
          test_tap/0, test_tap2/0, tap_all/0, test_link12/0, test_link/3,
-         test_clear/0, test_echo/1, send_flow_stats_req/1, stats_response/1]).
+         test_clear/0, test_echo/1, send_flow_stats_req/1, show_response/1]).
 
 
 -include_lib("of_protocol/include/of_protocol.hrl").
@@ -222,13 +222,26 @@ send_flow_stats_req(TableId) ->
     M1 = loom_ofmsg_lib:flow_stats_request(TableId),
     loom_ofdp:send_ofp_msg(D, M1).
 
-stats_response(Stats) ->
-    [ flow_details(X) || X <- Stats].
+%get stats_response 
+show_response(Type) ->
+    [Pid|_] = loom_ofdp_recv:get_all(default),
+    loom_ofdp_recv:get_response(Pid, Type, self()),
+    wait_for_reply().
+
+wait_for_reply() ->
+    receive
+        {reply, Reply} ->
+            io:format("Reply = ~p~n", [Reply]);
+%        Message = Reply#ofp_message.body,
+%        Stats = Message#ofp_flow_stats_reply.body,
+%        [ flow_details(X) || X <- Stats];
+        _ -> wait_for_reply()
+    end.
+
 
 flow_details(#ofp_flow_stats{table_id =TableId, duration_sec = DurationSec, priority= Priority,
                             idle_timeout = IdleTimeOut, hard_timeout = HardTimeOut, cookie = Cookie,
                             packet_count =PacketCount, byte_count = ByteCount, match = Match,
                             instructions= Instructions}) ->
-    lager:info("Flow_stats_reply: TableId = ~p, DurationSec = ~p, Priority = ~p, IdleTimeOut = ~p, HardTimeOut = ~p, Cookie = ~p, PacketCount = ~p, ByteCount = ~p\n",
-                [TableId, DurationSec, Priority, IdleTimeOut, HardTimeOut, Cookie, PacketCount, ByteCount]),
-    lager:info("Flow_stats_reply continued: Match = ~p, Instructions = ~p\n", [Match, Instructions]).
+    io:format("Flow_stats_reply: TableId = ~p, DurationSec = ~p, Priority = ~p, IdleTimeOut = ~p, HardTimeOut = ~p, Cookie = ~p, PacketCount = ~p, ByteCount = ~p, Match = ~p, Instructions =~p~n",
+                [TableId, DurationSec, Priority, IdleTimeOut, HardTimeOut, Cookie, PacketCount, ByteCount, Match, Instructions]).
